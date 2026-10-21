@@ -7,8 +7,8 @@ import type { RemoteRecord, SyncBackend } from './engine';
  * de segurança (RLS) do banco, que só deixam a dona da conta ler e gravar.
  * Também podem ser informados em Ajustes › Sincronização.
  */
-export const DEFAULT_SUPABASE_URL = '';
-export const DEFAULT_SUPABASE_KEY = '';
+export const DEFAULT_SUPABASE_URL = 'https://dghztcgapzaidjnkfopl.supabase.co';
+export const DEFAULT_SUPABASE_KEY = 'sb_publishable_hKsa9b7SFsZbN3pC1k_8nQ_TwHFYX12';
 
 const URL_KEY = 'nina.supabase.url';
 const ANON_KEY = 'nina.supabase.key';
@@ -72,7 +72,7 @@ export async function signIn(email: string, password: string) {
 export async function signUp(email: string, password: string) {
   const sb = supabase();
   if (!sb) throw new SyncError('Configure o endereço e a chave do Supabase primeiro.');
-  const { data, error } = await sb.auth.signUp({ email: email.trim(), password });
+  const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: 'https://marinamfajardo.github.io/nina-books/' } });
   if (error) friendly(error, 'Não foi possível criar a conta.');
   return { user: data.user, needsConfirmation: !data.session };
 }
