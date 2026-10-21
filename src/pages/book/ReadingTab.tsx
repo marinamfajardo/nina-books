@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { fmtDate, Modal, useToast } from '../../components/ui';
 import { db, type Book, type Reading, type Session } from '../../db';
 import { addSession } from '../../data/actions';
-import { currentPage, formatDuration, formatNumber, sessionPages, sessionWords, today } from '../../domain/stats';
+import { bookReadingStats } from '../../domain/rankings';
+import { currentPage, formatDuration, formatNumber, sessionPages, today } from '../../domain/stats';
 
 // ---------- Cronômetro (continua contando mesmo se você sair da tela) ----------
 const TIMER_KEY = 'nina.timer';
@@ -88,21 +89,29 @@ export function ReadingTab({ book, sessions, readings }: { book: Book; sessions:
   const rs = [...readings].sort((a, b) => b.number - a.number);
   const open = rs.find((r) => r.outcome === 'andamento');
   const fromPage = open ? currentPage(sessions, open.id) : 0;
-  const totalPages = sessions.reduce((s, x) => s + sessionPages(x), 0);
-  const totalWords = sessions.reduce((s, x) => s + sessionWords(x, book), 0);
-  const totalSec = sessions.reduce((s, x) => s + (x.durationSec ?? 0), 0);
+  const st = bookReadingStats(book, sessions, readings);
+  const remaining = book.pageCount && open ? Math.max(0, book.pageCount - fromPage) : 0;
+  const fmt1 = (n: number) => n.toFixed(1).replace('.', ',');
 
   return (
     <div>
       <Timer bookId={book.id} onFinish={(duration) => setForm({ duration })} />
       <button className="block" onClick={() => setForm({})}>+ Registrar páginas lidas</button>
 
-      <div className="kpis mt">
-        <div className="kpi"><div className="v">{formatNumber(totalPages)}</div><div className="l">páginas lidas (todas as leituras)</div></div>
-        <div className="kpi"><div className="v">{formatNumber(totalWords)}</div><div className="l">palavras (estimativa)</div></div>
-        <div className="kpi"><div className="v">{totalSec ? formatDuration(totalSec) : '—'}</div><div className="l">tempo cronometrado</div></div>
-        <div className="kpi"><div className="v">{readings.filter((r) => r.outcome === 'concluida').length}</div><div className="l">vezes lido</div></div>
+      <h3 className="mt">Estatísticas deste livro</h3>
+      <div className="kpis">
+        <div className="kpi"><div className="v">{formatNumber(st.pages)}</div><div className="l">páginas lidas (todas as leituras)</div></div>
+        <div className="kpi"><div className="v">{formatNumber(st.words)}</div><div className="l">palavras (estimativa)</div></div>
+        <div className="kpi"><div className="v">{st.seconds ? formatDuration(st.seconds) : '—'}</div><div className="l">tempo cronometrado</div></div>
+        <div className="kpi"><div className="v">{st.sessions}</div><div className="l">sessões · {st.readingDays} dia(s) com leitura</div></div>
+        <div className="kpi"><div className="v">{st.pagesPerSession ? Math.round(st.pagesPerSession) : '—'}</div><div className="l">páginas por sessão</div></div>
+        <div className="kpi"><div className="v">{st.pagesPerHour ? Math.round(st.pagesPerHour) : '—'}</div><div className="l">páginas por hora</div></div>
+        <div className="kpi"><div className="v">{st.minutesPerPage ? fmt1(st.minutesPerPage) : '—'}</div><div className="l">minutos por página</div></div>
+        <div className="kpi"><div className="v">{st.daysToFinish ?? '—'}</div><div className="l">dias para terminar · lido {st.timesRead}×</div></div>
       </div>
+      {remaining > 0 && st.minutesPerPage > 0 && (
+        <p className="small muted">⏱️ Faltam {remaining} páginas — no seu ritmo, cerca de {formatDuration(remaining * st.minutesPerPage * 60)} de leitura.</p>
+      )}
 
       {rs.length === 0 && <div className="empty">Nenhuma leitura registrada ainda. Mude o status para “Lendo” ou registre páginas.</div>}
       {rs.map((r) => {

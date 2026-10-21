@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
+import { downloadMedia } from '../sync/useSync';
 
 /** URL temporária para exibir uma mídia salva no aparelho. */
 export function useMediaUrl(id?: string) {
@@ -9,6 +10,12 @@ export function useMediaUrl(id?: string) {
   useEffect(() => {
     if (!media) {
       setUrl(undefined);
+      return;
+    }
+    if (!media.blob) {
+      // veio do outro aparelho: baixa da nuvem (a tela atualiza sozinha)
+      setUrl(undefined);
+      void downloadMedia(media.id);
       return;
     }
     const u = URL.createObjectURL(media.blob);

@@ -68,7 +68,7 @@ export function useLibrary(): Library {
 
 export function useList(kind: ListKind) {
   const items = useLiveQuery(() => db.lists.where('kind').equals(kind).toArray(), [kind]);
-  return useMemo(() => (items ?? []).map((i) => i.name).sort((a, b) => a.localeCompare(b, 'pt-BR')), [items]);
+  return useMemo(() => [...new Set((items ?? []).map((i) => i.name))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [items]);
 }
 
 export const useBook = (id?: string) => useLiveQuery(() => (id ? db.books.get(id) : undefined), [id]);

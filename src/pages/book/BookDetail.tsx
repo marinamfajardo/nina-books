@@ -16,8 +16,8 @@ import { ReadingTab } from './ReadingTab';
 import { SummaryTab } from './SummaryTab';
 
 const TABS = [
-  ['geral', 'Visão geral'], ['resumo', 'Resumo e resenha'], ['leitura', 'Leitura'], ['midia', 'Áudios e vídeos'], ['notas', 'Anotações'],
-  ['citacoes', 'Citações'], ['fotos', 'Fotos'], ['glossario', 'Glossário'],
+  ['geral', 'Visão geral'], ['resumo', 'Resumo e resenha'], ['leitura', 'Leitura'], ['midia', 'Fotos, áudios e vídeos'], ['citacoes', 'Citações'],
+  ['notas', 'Anotações'], ['fotos', 'Páginas fotografadas'], ['glossario', 'Glossário'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -71,7 +71,7 @@ export default function BookDetail() {
           <h1 style={{ marginBottom: 2 }}>{book.title}</h1>
           {book.subtitle && <div className="muted" style={{ marginBottom: 4 }}>{book.subtitle}</div>}
           <div style={{ fontWeight: 700 }}>
-            {book.authors.map((a, i) => <span key={a}>{i > 0 && ', '}<Link to={`/grupo/autor/${encodeURIComponent(a)}`}>{a}</Link></span>)}
+            {book.authors.map((a, i) => <span key={a}>{i > 0 && ', '}<Link to={`/autor/${encodeURIComponent(a)}`}>{a}</Link></span>)}
           </div>
           <div className="small muted mt" style={{ marginTop: 6 }}>
             {[book.publisher, book.year, book.pageCount && `${book.pageCount} páginas`, book.isbn && `ISBN ${book.isbn}`].filter(Boolean).join(' · ')}
@@ -133,7 +133,7 @@ export default function BookDetail() {
       {tab === 'leitura' && <ReadingTab book={book} sessions={sessions} readings={readings} />}
       {tab === 'midia' && <NotesTab bookId={book.id} mode="midia" />}
       {tab === 'notas' && <NotesTab bookId={book.id} mode="texto" />}
-      {tab === 'citacoes' && <QuotesTab bookId={book.id} />}
+      {tab === 'citacoes' && <QuotesTab bookId={book.id} language={book.readingLanguage} />}
       {tab === 'fotos' && <PhotosTab bookId={book.id} />}
       {tab === 'glossario' && <BookGlossaryTab book={book} />}
 

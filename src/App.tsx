@@ -11,6 +11,9 @@ import { GroupBooks, GroupList } from './pages/Groups';
 import Settings from './pages/Settings';
 import Shelf from './pages/Shelf';
 import Stats from './pages/Stats';
+import Ranking, { AuthorList, AuthorPage } from './pages/Ranking';
+import { SyncStatusBadge } from './pages/SyncSettings';
+import { useAutoSync } from './sync/useSync';
 
 function ScrollTop() {
   const { pathname } = useLocation();
@@ -19,11 +22,14 @@ function ScrollTop() {
 }
 
 function Shell() {
+  useAutoSync();
   return (
     <div className="app">
       <ScrollTop />
       <header className="topbar">
         <Link to="/" className="logo"><Logo /> Nina <span>Book's</span></Link>
+        <span className="spacer" />
+        <Link to="/configuracoes" style={{ textDecoration: 'none' }}><SyncStatusBadge /></Link>
       </header>
       <main className="content">
         <Routes>
@@ -40,6 +46,9 @@ function Shell() {
           <Route path="/emprestimos" element={<Loans />} />
           <Route path="/desejos" element={<Wishlist />} />
           <Route path="/backup" element={<Backup />} />
+          <Route path="/ranking" element={<Ranking />} />
+          <Route path="/autores" element={<AuthorList />} />
+          <Route path="/autor/:name" element={<AuthorPage />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Ir para a estante</Link></div>} />
         </Routes>
       </main>

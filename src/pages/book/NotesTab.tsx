@@ -4,7 +4,7 @@ import { CaptureButton, ErrorBox, fmtDateTime, Modal, useToast } from '../../com
 import { db, nowIso, uid, type Note } from '../../db';
 import { saveMedia } from '../../data/actions';
 import { formatDuration } from '../../domain/stats';
-import { useMediaUrl } from '../../services/media';
+import { shrinkImage, useMediaUrl } from '../../services/media';
 
 const micError = (e: unknown) => {
   const n = (e as Error)?.name;
@@ -69,7 +69,8 @@ function AudioRecorder({ onDone }: { onDone: (blob: Blob, sec: number) => void }
 
 function MediaPlayer({ note }: { note: Note }) {
   const url = useMediaUrl(note.mediaId);
-  if (!url) return null;
+  if (!url) return <p className="small muted">⏳ Carregando arquivo…</p>;
+  if (note.kind === 'foto') return <img src={url} alt={note.title ?? 'Foto'} style={{ width: '100%', borderRadius: 12, display: 'block', maxHeight: 520, objectFit: 'contain', background: 'var(--surface-2)' }} />;
   return note.kind === 'audio'
     ? <audio controls src={url} style={{ width: '100%' }} />
     : <video controls playsInline src={url} style={{ width: '100%', borderRadius: 12, maxHeight: 420, background: '#000' }} />;
@@ -95,7 +96,7 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'texto' | 'mi
       mediaId, page: draft.page ? Number(draft.page) : undefined, createdAt: nowIso(),
     });
     setDraft(null);
-    toast(draft.kind === 'texto' ? 'Anotação salva' : draft.kind === 'audio' ? 'Áudio salvo no livro 🎙️' : 'Vídeo salvo no livro 🎥');
+    toast({ texto: 'Anotação salva', audio: 'Áudio salvo no livro 🎙️', video: 'Vídeo salvo no livro 🎥', foto: 'Foto salva no livro 📷' }[draft.kind]);
   };
 
   const remove = async (n: Note) => {
@@ -112,16 +113,20 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'texto' | 'mi
         <button className="block" style={{ marginBottom: 14 }} onClick={() => setDraft(blank('texto'))}>✍️ Nova anotação</button>
       ) : (
         <div style={{ marginBottom: 14 }}>
-          <div className="grid2">
-            <button onClick={() => setDraft(blank('audio'))}>🎙️ Gravar áudio</button>
-            <CaptureButton accept="video/*" className="" onFile={(f) => setDraft({ ...blank('video'), blob: f })}>🎥 Gravar vídeo</CaptureButton>
+          <div className="grid3">
+            <CaptureButton accept="image/*" className="" onFile={async (f) => setDraft({ ...blank('foto'), blob: await shrinkImage(f, 2000) })}>📷 Foto</CaptureButton>
+            <button onClick={() => setDraft(blank('audio'))}>🎙️ Áudio</button>
+            <CaptureButton accept="video/*" className="" onFile={(f) => setDraft({ ...blank('video'), blob: f })}>🎥 Vídeo</CaptureButton>
           </div>
           <div className="center">
-            <CaptureButton accept="video/*,audio/*" capture={false} className="ghost small" onFile={(f) => setDraft({ ...blank(f.type.startsWith('audio') ? 'audio' : 'video'), blob: f, title: f.name.replace(/\.[^.]+$/, '') })}>
-              ou escolher um vídeo/áudio já gravado
+            <CaptureButton accept="image/*,video/*,audio/*" capture={false} className="ghost small" onFile={async (f) => {
+              const kind = f.type.startsWith('audio') ? 'audio' : f.type.startsWith('image') ? 'foto' : 'video';
+              setDraft({ ...blank(kind), blob: kind === 'foto' ? await shrinkImage(f, 2000) : f, title: f.name.replace(/\.[^.]+$/, '') });
+            }}>
+              ou adicionar da galeria / arquivos
             </CaptureButton>
           </div>
-          <p className="small muted center" style={{ margin: 0 }}>Os áudios e vídeos ficam guardados aqui no livro, no próprio aparelho.</p>
+          <p className="small muted center" style={{ margin: 0 }}>Fotos, áudios e vídeos ficam guardados aqui no livro (e na nuvem, se a sincronização estiver ligada).</p>
         </div>
       )}
 
@@ -129,14 +134,14 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'texto' | 'mi
         <div className="empty">
           {mode === 'texto'
             ? 'Nenhuma anotação ainda. Escreva o que você pensou durante a leitura.'
-            : 'Nenhum áudio ou vídeo ainda. Grave suas impressões sobre o livro!'}
+            : 'Nada aqui ainda. Tire fotos, grave áudios ou vídeos com suas impressões sobre o livro!'}
         </div>
       )}
       <div className="timeline">
         {notes.map((n) => (
           <div className="ev card" key={n.id}>
             <div className="row between small muted">
-              <span>{n.kind === 'texto' ? '✍️' : n.kind === 'audio' ? '🎙️' : '🎥'} {fmtDateTime(n.createdAt)}{n.page ? ` · p. ${n.page}` : ''}</span>
+              <span>{{ texto: '✍️', audio: '🎙️', video: '🎥', foto: '📷' }[n.kind]} {fmtDateTime(n.createdAt)}{n.page ? ` · p. ${n.page}` : ''}</span>
               <span>
                 <button className="icon small" onClick={() => setEditing(n)} aria-label="Editar">✎</button>
                 <button className="icon small" onClick={() => remove(n)} aria-label="Apagar">✕</button>
@@ -150,10 +155,11 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'texto' | 'mi
       </div>
 
       {draft && (
-        <Modal title={draft.kind === 'texto' ? 'Nova anotação' : draft.kind === 'audio' ? 'Gravar áudio' : 'Vídeo'} onClose={() => setDraft(null)}>
+        <Modal title={{ texto: 'Nova anotação', audio: 'Gravar áudio', video: 'Vídeo', foto: 'Foto' }[draft.kind]} onClose={() => setDraft(null)}>
           <div className="stack">
             {draft.kind === 'audio' && !draft.blob && <AudioRecorder onDone={(blob, seconds) => setDraft((d) => d && { ...d, blob, seconds })} />}
             {draft.blob && draft.kind === 'audio' && <audio controls src={URL.createObjectURL(draft.blob)} style={{ width: '100%' }} />}
+            {draft.blob && draft.kind === 'foto' && <img src={URL.createObjectURL(draft.blob)} alt="Prévia" style={{ width: '100%', borderRadius: 12, maxHeight: 360, objectFit: 'contain' }} />}
             {draft.blob && draft.kind === 'video' && <video controls playsInline src={URL.createObjectURL(draft.blob)} style={{ width: '100%', borderRadius: 12 }} />}
             <label className="field"><span>{draft.kind === 'texto' ? 'Título (opcional)' : 'Nome'}</span><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
             {draft.kind === 'texto' && <label className="field"><span>Anotação</span><textarea autoFocus value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>}

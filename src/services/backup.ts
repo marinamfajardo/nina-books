@@ -1,5 +1,6 @@
 import JSZip from 'jszip';
 import { db, TABLES, type Media } from '../db';
+import { downloadMedia } from '../sync/useSync';
 
 const FORMAT = 'nina-books-backup';
 const LAST_BACKUP_KEY = 'nina.lastBackup';
@@ -13,12 +14,14 @@ export async function exportBackup(onProgress?: (msg: string) => void): Promise<
   for (const t of TABLES) data[t] = await db.table(t).toArray();
   const mediaMeta: { id: string; type: string; name?: string; createdAt: string; file: string }[] = [];
   const media = await db.media.toArray();
-  media.forEach((m, i) => {
+  for (const [i, m] of media.entries()) {
     onProgress?.(`Copiando mídia ${i + 1} de ${media.length}…`);
+    const blob = m.blob ?? (await downloadMedia(m.id));
+    if (!blob) continue; // arquivo que está só na nuvem e não pôde ser baixado
     const file = `media/${m.id}`;
-    zip.file(file, m.blob);
+    zip.file(file, blob);
     mediaMeta.push({ id: m.id, type: m.type, name: m.name, createdAt: m.createdAt, file });
-  });
+  }
   zip.file('data.json', JSON.stringify({ format: FORMAT, version: 1, exportedAt: new Date().toISOString(), data, media: mediaMeta }));
   onProgress?.('Compactando…');
   const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });

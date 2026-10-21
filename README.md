@@ -11,8 +11,24 @@ Gerenciador pessoal de leituras: estante, classificação, sessões de leitura, 
 3. Escolha **Adicionar à Tela de Início** › **Adicionar**.
 4. Abra o Nina Book's pelo ícone. Ele funciona em tela cheia e também sem internet.
 
-> ⚠️ Os dados ficam **somente no aparelho**. Celular e iPad têm estantes separadas — use **Ajustes › Backup e CSV** para exportar de um e restaurar no outro.
-> Não apague o ícone da tela de início sem fazer backup antes: no iOS isso apaga os dados.
+## Mesma estante no celular e no iPad (sincronização)
+
+Os dados ficam no aparelho (o app funciona offline) e, com a sincronização ligada, também numa conta gratuita do **Supabase**. Tudo o que é feito num aparelho aparece no outro: livros, sessões, anotações, citações, glossário, metas e também fotos, áudios e vídeos.
+
+**Preparar a nuvem (uma vez só):**
+
+1. Crie uma conta em https://supabase.com (pode entrar com o GitHub) e um projeto novo (plano Free).
+2. No projeto, abra **SQL Editor**, cole o conteúdo de [`supabase/setup.sql`](supabase/setup.sql) e clique em **Run**.
+3. Em **Authentication › Sign In / Providers › Email**, desligue **Confirm email** (opcional, simplifica o primeiro acesso).
+4. Em **Project Settings › API** copie a **Project URL** e a chave **anon / publishable**.
+
+**Em cada aparelho:** Ajustes › *Mesma estante no celular e no iPad* › cole a URL e a chave › **Salvar projeto**.
+No primeiro aparelho toque em **Criar conta**; no outro, **Entrar** com o mesmo e-mail e senha.
+Depois de criar a conta, desligue **Allow new users to sign up** (Authentication › Sign In / Providers) para ninguém mais usar o seu projeto.
+
+Como funciona: toda gravação local entra numa fila (`_outbox`, via middleware do Dexie). O app envia a fila e depois baixa o que mudou na nuvem (tabela única `records`, protegida por RLS), ao abrir, ao voltar para o app, a cada 30 s e logo após mudanças. Arquivos vão para o Storage (`media/<usuária>/<id>`) e são baixados no outro aparelho quando aparecem na tela. Limites do plano gratuito: 50 MB por arquivo e 1 GB no total; projetos sem uso por 7 dias são pausados (reative no painel do Supabase).
+
+> Sem a sincronização, os dados ficam só no aparelho: use **Ajustes › Backup e CSV** e não apague o ícone da tela de início sem backup (no iOS isso apaga os dados).
 
 ## Onde configurar a chave da API (IA)
 
@@ -41,6 +57,8 @@ O pedido original era um app nativo em React Native/Expo. Para instalar no iPhon
 | Gráficos | Recharts |
 | Offline | Service worker (vite-plugin-pwa / Workbox) |
 | Backup | `.zip` com `data.json` + pasta `media/` (JSZip); CSV com PapaParse |
+| Sincronização | Supabase (Postgres + Auth + Storage), fila local com middleware do Dexie |
+| Citações por voz | Reconhecimento de fala do navegador (Web Speech API), no idioma do livro |
 
 ### Estrutura
 
@@ -50,6 +68,7 @@ src/
   domain/               regras puras (páginas, palavras, estatísticas, metas, filtros, flashcards) + testes
   data/                 ações no banco (status ⇄ leituras, sessões, importação) + hooks
   services/             APIs de livros, Claude, OCR, mídia, backup, CSV
+  sync/                 sincronização entre aparelhos (fila, motor, Supabase)
   components/           componentes visuais (capa, estrelas, scanner, formulário)
   pages/                telas (Estante, Adicionar, Livro, Estatísticas, Glossário, Ajustes…)
 ```

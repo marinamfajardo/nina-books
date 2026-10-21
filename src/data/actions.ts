@@ -5,8 +5,9 @@ import { closingSession, today } from '../domain/stats';
 export async function seedDefaults() {
   if ((await db.lists.count()) > 0) return;
   await db.lists.bulkAdd([
-    ...DEFAULT_GENRES.map((name) => ({ id: uid(), kind: 'genre' as const, name })),
-    ...DEFAULT_LANGUAGES.map((name) => ({ id: uid(), kind: 'language' as const, name })),
+    // ids fixos: o celular e o iPad criam os mesmos itens padrão, sem duplicar ao sincronizar
+    ...DEFAULT_GENRES.map((name) => ({ id: `genre:${name}`, kind: 'genre' as const, name })),
+    ...DEFAULT_LANGUAGES.map((name) => ({ id: `language:${name}`, kind: 'language' as const, name })),
   ]);
 }
 
@@ -15,7 +16,7 @@ export async function ensureListItems(kind: ListKind, names: (string | undefined
     const name = raw?.trim();
     if (!name) continue;
     const exists = await db.lists.where('[kind+name]').equals([kind, name]).first();
-    if (!exists) await db.lists.add({ id: uid(), kind, name });
+    if (!exists) await db.lists.put({ id: `${kind}:${name}`, kind, name });
   }
 }
 

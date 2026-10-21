@@ -102,6 +102,11 @@ export default function Stats() {
         {!goal && <p className="small muted mt">Defina uma meta anual de livros e/ou páginas, como no desafio do Skoob.</p>}
       </div>
 
+      <div className="grid2" style={{ marginBottom: 14 }}>
+        <Link to="/ranking" className="group-tile"><b>🏆 Meu ranking</b><span className="muted">›</span></Link>
+        <Link to="/autores" className="group-tile"><b>✍️ Autores</b><span className="muted">›</span></Link>
+      </div>
+
       <div className="kpis">
         <div className="kpi"><div className="v">{formatNumber(t.pages)}</div><div className="l">páginas lidas</div></div>
         <div className="kpi"><div className="v">{formatNumber(t.words)}</div><div className="l">palavras lidas</div></div>

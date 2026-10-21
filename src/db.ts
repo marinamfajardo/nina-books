@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie';
+import { installOutbox } from './sync/outbox';
 
 export type Status = 'quero_ler' | 'lendo' | 'lido' | 'relendo' | 'desisti';
 export type Format = 'fisico' | 'ebook' | 'audio';
@@ -67,7 +68,7 @@ export interface Session {
 export interface Note {
   id: string;
   bookId: string;
-  kind: 'texto' | 'audio' | 'video';
+  kind: 'texto' | 'audio' | 'video' | 'foto';
   title?: string;
   text?: string;
   mediaId?: string;
@@ -140,10 +141,20 @@ export interface WishItem {
 
 export interface Media {
   id: string;
-  blob: Blob;
+  /** Ausente quando o arquivo veio de outro aparelho e ainda não foi baixado */
+  blob?: Blob;
+  size?: number;
   type: string;
   name?: string;
   createdAt: string;
+}
+
+/** Mudança local que ainda precisa ir para a nuvem */
+export interface OutboxItem {
+  k: string; // "tabela:id"
+  tbl: string;
+  id: string;
+  t?: number;
 }
 
 export interface ListItem {
@@ -165,6 +176,7 @@ export class NinaDB extends Dexie {
   wishlist!: EntityTable<WishItem, 'id'>;
   media!: EntityTable<Media, 'id'>;
   lists!: EntityTable<ListItem, 'id'>;
+  _outbox!: EntityTable<OutboxItem, 'k'>;
 
   constructor(name = 'nina-books') {
     super(name);
@@ -184,6 +196,9 @@ export class NinaDB extends Dexie {
       media: 'id',
       lists: 'id, kind, name, [kind+name]',
     });
+    // v2: fila de sincronização entre aparelhos
+    this.version(2).stores({ _outbox: 'k' });
+    installOutbox(this);
   }
 }
 
@@ -193,6 +208,9 @@ export const TABLES = [
   'books', 'readings', 'sessions', 'notes', 'quotes', 'photos',
   'glossary', 'goals', 'loans', 'wishlist', 'lists',
 ] as const;
+
+/** Tabelas sincronizadas entre aparelhos (media leva só os dados; o arquivo vai para o armazenamento) */
+export const SYNCED_TABLES = [...TABLES, 'media'] as const;
 
 export const uid = () => crypto.randomUUID();
 export const nowIso = () => new Date().toISOString();

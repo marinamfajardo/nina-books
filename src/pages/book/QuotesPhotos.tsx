@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useRef, useState } from 'react';
+import { DictateButton } from '../../components/Dictation';
 import { CaptureButton, ErrorBox, fmtDate, Modal, useToast } from '../../components/ui';
 import { db, nowIso, uid, type PagePhoto, type Quote } from '../../db';
 import { saveMedia } from '../../data/actions';
@@ -70,7 +71,7 @@ function PhotoViewer({ photo, onClose }: { photo: PagePhoto; onClose: () => void
   const rerun = async () => {
     setErr(null);
     const m = await db.media.get(photo.mediaId);
-    if (!m) return;
+    if (!m?.blob) return setErr('A foto ainda está sendo baixada da nuvem. Tente de novo em instantes.');
     try {
       setBusy('Lendo o texto…');
       const t = await extractText(m.blob, (p) => setBusy(`Lendo o texto… ${Math.round(p * 100)}%`));
@@ -147,7 +148,8 @@ export function PhotosTab({ bookId }: { bookId: string }) {
   );
 }
 
-export function QuotesTab({ bookId }: { bookId: string }) {
+export function QuotesTab({ bookId, language }: { bookId: string; language?: string }) {
+  const [interim, setInterim] = useState('');
   const quotes = useLiveQuery(() => db.quotes.where('bookId').equals(bookId).reverse().sortBy('createdAt'), [bookId]) ?? [];
   const [edit, setEdit] = useState<Partial<Quote> | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -166,7 +168,7 @@ export function QuotesTab({ bookId }: { bookId: string }) {
   return (
     <div>
       <div className="row" style={{ marginBottom: 14 }}>
-        <button className="grow" onClick={() => setEdit({})}>✍️ Digitar citação</button>
+        <button className="grow" onClick={() => setEdit({})}>✍️ Escrever ou 🎤 falar</button>
         <CaptureButton accept="image/*" className="secondary grow" onFile={async (f) => {
           setErr(null);
           const r = await capturePagePhoto(bookId, f, setBusy);
@@ -196,7 +198,15 @@ export function QuotesTab({ bookId }: { bookId: string }) {
       {edit && (
         <Modal title={edit.id ? 'Editar citação' : 'Nova citação'} onClose={() => setEdit(null)}>
           <div className="stack">
-            <label className="field"><span>Citação</span><textarea autoFocus value={edit.text ?? ''} onChange={(e) => setEdit({ ...edit, text: e.target.value })} /></label>
+            <DictateButton
+              language={language}
+              onInterim={setInterim}
+              onText={(t) => setEdit((cur) => cur && { ...cur, text: cur.text?.trim() ? `${cur.text.trim()} ${t}` : t })}
+            />
+            <label className="field"><span>Citação (escreva ou fale)</span>
+              <textarea value={edit.text ?? ''} onChange={(e) => setEdit({ ...edit, text: e.target.value })} placeholder="Digite aqui ou toque em “Falar a citação”" />
+            </label>
+            {interim && <p className="small muted" style={{ margin: 0, fontStyle: 'italic' }}>…{interim}</p>}
             <label className="field"><span>Página</span><input inputMode="numeric" value={edit.page ?? ''} onChange={(e) => setEdit({ ...edit, page: Number(e.target.value.replace(/\D/g, '')) || undefined })} /></label>
             <label className="field"><span>Meu comentário</span><textarea value={edit.comment ?? ''} onChange={(e) => setEdit({ ...edit, comment: e.target.value })} /></label>
             <button className="block" onClick={save} disabled={!edit.text?.trim()}>Salvar</button>

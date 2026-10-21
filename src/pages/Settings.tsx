@@ -7,6 +7,7 @@ import { useList } from '../data/hooks';
 import { getApiKey, setApiKey } from '../services/claude';
 import { getOcrEngine, setOcrEngine, type OcrEngine } from '../services/ocr';
 import { applyTheme, getTheme, type Theme } from '../theme';
+import SyncSettings from './SyncSettings';
 
 function ListManager({ kind, title }: { kind: ListKind; title: string }) {
   const items = useList(kind);
@@ -42,9 +43,13 @@ export default function Settings() {
     <div>
       <PageTitle>Configurações</PageTitle>
 
+      <SyncSettings />
+
       <div className="card">
         <h3>Mais recursos</h3>
         <div className="group-grid">
+          <Link to="/ranking" className="group-tile"><b>🏆 Ranking</b></Link>
+          <Link to="/autores" className="group-tile"><b>✍️ Autores</b></Link>
           <Link to="/metas" className="group-tile"><b>🎯 Metas</b></Link>
           <Link to="/quero-ler" className="group-tile"><b>📌 Quero ler</b></Link>
           <Link to="/emprestimos" className="group-tile"><b>📤 Empréstimos</b></Link>
@@ -94,8 +99,8 @@ export default function Settings() {
 
       <div className="card small">
         <h3>Sobre</h3>
-        <p><b>Nina Book's</b> — sua biblioteca pessoal. Todos os livros, fotos, áudios e vídeos ficam guardados <b>somente neste aparelho</b>.</p>
-        <p className="muted">Dica: não apague o ícone do app da tela de início — isso apaga os dados. Faça backups de vez em quando.</p>
+        <p><b>Nina Book's</b> — sua biblioteca pessoal. Os dados ficam guardados no aparelho e, se você conectar a sincronização, também na sua conta na nuvem.</p>
+        <p className="muted">Dica: sem a sincronização, não apague o ícone do app da tela de início — isso apaga os dados.</p>
       </div>
     </div>
   );
