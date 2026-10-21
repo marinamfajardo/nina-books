@@ -3,20 +3,75 @@ import type { Book, Format, Ownership, Status } from '../db';
 import { ensureListItems } from '../data/actions';
 import { useList } from '../data/hooks';
 import { DEFAULT_WORDS_PER_PAGE, FORMAT_LABEL, OWNERSHIP_LABEL, STATUS_LABEL, STATUSES } from '../domain/constants';
+import { hasApiKey, researchBook } from '../services/claude';
 import { shrinkImage } from '../services/media';
-import { CaptureButton, ChipSelect, Cover, MultiChips, Stars } from './ui';
+import { CoverStep } from './CoverCropper';
+import { CaptureButton, ChipSelect, Cover, ErrorBox, Modal, MultiChips, Stars } from './ui';
 
 export type BookDraft = Partial<Book> & { title: string; authors: string[]; coverBlob?: Blob };
 
 const num = (s: string) => (s.trim() === '' ? undefined : Math.max(0, Number(s)) || undefined);
 
 /** Formulário completo do livro (cadastro e edição). */
-export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar' }: {
-  initial: BookDraft; onSave: (d: BookDraft) => Promise<void> | void; onCancel?: () => void; saveLabel?: string;
+/** Escolha do resumo no cadastro: a IA pesquisa na internet, ou a pessoa escreve. */
+function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<BookDraft>) => void; authors: string[] }) {
+  const [mode, setMode] = useState<'ia' | 'manual' | null>(d.summaryAI ? 'ia' : d.summaryManual ? 'manual' : null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const search = async () => {
+    setMode('ia');
+    setErr(null);
+    setBusy(true);
+    try {
+      const r = await researchBook(d.title, authors);
+      // só completa os campos que ainda estão vazios
+      set({
+        summaryAI: r.summary, summaryAISources: r.sources, summaryAIDate: new Date().toISOString(),
+        publisher: d.publisher ?? r.publisher, year: d.year ?? r.year, pageCount: d.pageCount ?? r.pageCount,
+        originalLanguage: d.originalLanguage ?? r.originalLanguage, synopsis: d.synopsis ?? r.synopsis,
+      });
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="card" style={{ background: 'var(--surface-2)', boxShadow: 'none' }}>
+      <h3>Resumo do livro</h3>
+      <div className="summary-choice">
+        <button type="button" className={mode === 'ia' ? '' : 'secondary'} disabled={busy || !d.title.trim() || !hasApiKey()} onClick={search}>
+          {busy ? '⏳ Pesquisando…' : '✨ Buscar na internet'}
+        </button>
+        <button type="button" className={mode === 'manual' ? '' : 'secondary'} onClick={() => setMode('manual')}>✍️ Eu escrevo</button>
+      </div>
+      {!hasApiKey() && <p className="small muted mt">Para a IA buscar o resumo, cadastre a chave em Ajustes.</p>}
+      <ErrorBox error={err} />
+      {busy && <p className="small muted mt">A IA está pesquisando “{d.title}” na internet. Pode levar até um minuto…</p>}
+      {mode === 'ia' && d.summaryAI && (
+        <div className="mt">
+          <span className="badge ai">✨ gerado por IA — pode editar</span>
+          <textarea className="mt" rows={10} style={{ minHeight: 220 }} value={d.summaryAI} onChange={(e) => set({ summaryAI: e.target.value })} />
+          {d.summaryAISources?.length ? <p className="small muted">Fontes: {d.summaryAISources.map((s) => s.title).slice(0, 3).join(' · ')}</p> : null}
+          <p className="small muted">A IA também completou editora, ano e páginas quando encontrou. Confira abaixo.</p>
+        </div>
+      )}
+      {mode === 'manual' && (
+        <textarea className="mt" rows={8} autoFocus placeholder="Com suas palavras: do que o livro trata?" value={d.summaryManual ?? ''} onChange={(e) => set({ summaryManual: e.target.value || undefined })} />
+      )}
+    </div>
+  );
+}
+
+export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', withSummary = false }: {
+  initial: BookDraft; onSave: (d: BookDraft) => Promise<void> | void; onCancel?: () => void; saveLabel?: string; withSummary?: boolean;
 }) {
+  const [newPhoto, setNewPhoto] = useState<Blob | null>(null);
   const [d, setD] = useState<BookDraft>({ status: 'quero_ler', favorite: false, rating: 0, genres: [], tags: [], ...initial });
   const [authors, setAuthors] = useState(initial.authors.join(', '));
-  const [previewUrl, setPreviewUrl] = useState<string>();
+  const [previewUrl, setPreviewUrl] = useState<string | undefined>(() => (initial.coverBlob ? URL.createObjectURL(initial.coverBlob) : undefined));
   const [saving, setSaving] = useState(false);
   const genres = useList('genre');
   const languages = useList('language');
@@ -46,12 +101,8 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar' }: {
           <CaptureButton
             accept="image/*"
             className="ghost small"
-            onFile={async (f) => {
-              const blob = await shrinkImage(f, 1000);
-              set({ coverBlob: blob });
-              setPreviewUrl(URL.createObjectURL(blob));
-            }}
-          >📷 Capa</CaptureButton>
+            onFile={async (f) => setNewPhoto(await shrinkImage(f, 1600))}
+          >📷 {d.coverBlob || d.coverId || d.coverUrl ? 'Trocar' : 'Capa'}</CaptureButton>
         </div>
         <div className="grow stack">
           <label className="field"><span>Título *</span><input required value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>
@@ -59,6 +110,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar' }: {
         </div>
       </div>
       <label className="field"><span>Autor(es) — separe por vírgula</span><input value={authors} onChange={(e) => setAuthors(e.target.value)} /></label>
+      {withSummary && <SummaryChooser d={d} set={set} authors={authors.split(',').map((a) => a.trim()).filter(Boolean)} />}
       <div className="grid2">
         <label className="field"><span>Editora</span><input value={d.publisher ?? ''} onChange={(e) => set({ publisher: e.target.value || undefined })} /></label>
         <label className="field"><span>Ano</span><input inputMode="numeric" value={d.year ?? ''} onChange={(e) => set({ year: num(e.target.value) })} /></label>
@@ -129,6 +181,20 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar' }: {
         </div>
         <p className="small muted">Se você informar o total de palavras, ele é usado no lugar da estimativa por página.</p>
       </details>
+
+      {newPhoto && (
+        <Modal title="Recortar capa" onClose={() => setNewPhoto(null)}>
+          <CoverStep
+            photo={newPhoto}
+            onRetake={() => setNewPhoto(null)}
+            onDone={(blob) => {
+              set({ coverBlob: blob });
+              setPreviewUrl(URL.createObjectURL(blob));
+              setNewPhoto(null);
+            }}
+          />
+        </Modal>
+      )}
 
       <div className="row mt">
         {onCancel && <button type="button" className="secondary grow" onClick={onCancel}>Cancelar</button>}

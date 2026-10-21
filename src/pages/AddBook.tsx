@@ -1,134 +1,51 @@
-import { useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { BarcodeScanner, decodeBarcodeFromImage } from '../components/BarcodeScanner';
+import { useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { BookForm, type BookDraft } from '../components/BookForm';
-import { CaptureButton, Cover, ErrorBox, PageTitle, useToast } from '../components/ui';
-import { findByIsbn } from '../data/actions';
+import { CoverStep } from '../components/CoverCropper';
+import { ErrorBox, PageTitle, useToast } from '../components/ui';
+import { db } from '../db';
 import { createFromDraft } from '../data/saveDraft';
-import { cleanIsbn, isValidIsbn, lookupIsbn, searchBooks, type FoundBook } from '../services/bookLookup';
-import { hasApiKey, readCover } from '../services/claude';
-import { blobToBase64, shrinkImage } from '../services/media';
-import { extractText } from '../services/ocr';
+import { normalize } from '../domain/filters';
+import { hasApiKey } from '../services/claude';
+import { shrinkImage } from '../services/media';
 
-type Step = 'menu' | 'scan' | 'search' | 'form';
+type Step = 'foto' | 'recorte' | 'dados';
 
-const toDraft = (f: FoundBook): BookDraft => ({
-  title: f.title, subtitle: f.subtitle, authors: f.authors, publisher: f.publisher, year: f.year,
-  isbn: f.isbn, pageCount: f.pageCount, coverUrl: f.coverUrl, originalLanguage: f.originalLanguage, synopsis: f.synopsis,
-});
+/** Procura um livro com o mesmo título (e autor, se houver) na estante. */
+async function findSameBook(title: string, authors: string[]) {
+  const t = normalize(title).trim();
+  const a = authors[0] ? normalize(authors[0]) : null;
+  return (await db.books.toArray()).find((b) => normalize(b.title).trim() === t && (!a || b.authors.some((x) => normalize(x) === a)));
+}
 
 export default function AddBook() {
   const nav = useNavigate();
   const toast = useToast();
-  const [step, setStep] = useState<Step>('menu');
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState('');
-  const [isbnInput, setIsbnInput] = useState('');
-  const [results, setResults] = useState<FoundBook[]>([]);
-  const [draft, setDraft] = useState<BookDraft>({ title: '', authors: [] });
+  const [step, setStep] = useState<Step>('foto');
   const [photo, setPhoto] = useState<Blob | null>(null);
+  const [draft, setDraft] = useState<BookDraft>({ title: '', authors: [] });
+  const [error, setError] = useState<string | null>(null);
+  const camera = useRef<HTMLInputElement>(null);
+  const gallery = useRef<HTMLInputElement>(null);
 
-  const openDraft = async (d: BookDraft) => {
-    const dup = await findByIsbn(d.isbn);
-    if (dup) {
-      if (!confirm(`“${dup.title}” já está na sua estante (mesmo ISBN). Quer abrir o livro que já existe?`)) {
-        setDraft(d);
-        setStep('form');
-        return;
-      }
-      nav(`/livro/${dup.id}`);
-      return;
-    }
-    setDraft(d);
-    setStep('form');
-  };
-
-  const byIsbn = useCallback(async (raw: string) => {
-    const isbn = cleanIsbn(raw);
+  const onFile = async (f?: File) => {
+    if (!f) return;
     setError(null);
-    if (!isValidIsbn(isbn)) {
-      setError(`“${raw}” não parece um ISBN válido. Confira os números ou busque pelo título.`);
-      setStep('menu');
-      return;
-    }
-    const dup = await findByIsbn(isbn);
-    if (dup) {
-      setStep('menu');
-      if (confirm(`“${dup.title}” já está na sua estante. Abrir?`)) nav(`/livro/${dup.id}`);
-      return;
-    }
-    setBusy('Buscando o livro…');
     try {
-      const found = await lookupIsbn(isbn);
-      await openDraft(toDraft(found));
-    } catch (e) {
-      setError((e as Error).message);
-      setDraft({ title: '', authors: [], isbn });
-      setStep('menu');
-    } finally {
-      setBusy(null);
+      setPhoto(await shrinkImage(f, 1600));
+      setStep('recorte');
+    } catch {
+      setError('Não foi possível abrir a foto. Tente de novo.');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const search = async (q: string) => {
-    setError(null);
-    setBusy('Buscando…');
-    try {
-      const r = await searchBooks(q);
-      setResults(r);
-      setStep('search');
-      if (!r.length) setError('Nenhum livro encontrado. Tente outras palavras ou cadastre manualmente.');
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const fromCoverPhoto = async (file: File) => {
-    setError(null);
-    const img = await shrinkImage(file, 1400);
-    setPhoto(img);
-    setBusy('Lendo a capa…');
-    try {
-      // 1) talvez a foto seja do código de barras
-      const code = await decodeBarcodeFromImage(img);
-      if (code && isValidIsbn(code)) {
-        setBusy(null);
-        await byIsbn(code);
-        return;
-      }
-      // 2) título e autor pela IA, ou OCR no aparelho
-      let q = '';
-      if (hasApiKey() && navigator.onLine) {
-        const { title, author } = await readCover(await blobToBase64(img), img.type || 'image/jpeg');
-        q = `${title} ${author}`.trim();
-      } else {
-        setBusy('Lendo o texto da capa no aparelho…');
-        const text = await extractText(img);
-        q = text.split('\n').map((l) => l.trim()).filter((l) => l.length > 2).slice(0, 3).join(' ');
-      }
-      if (!q) throw new Error('Não consegui ler o título na foto. Digite o título abaixo.');
-      setQuery(q);
-      await search(q);
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(null);
-    }
-  };
-
-  const pick = (f: FoundBook) => {
-    const d = toDraft(f);
-    // sem capa nas APIs: usa a foto tirada
-    if (!d.coverUrl && photo) d.coverBlob = photo;
-    void openDraft(d);
   };
 
   const save = async (d: BookDraft) => {
     try {
-      if (!d.coverBlob && !d.coverUrl && photo) d.coverBlob = photo;
+      const dup = await findSameBook(d.title, d.authors);
+      if (dup && !confirm(`“${dup.title}” já está na sua estante. Adicionar outro exemplar mesmo assim?`)) {
+        nav(`/livro/${dup.id}`);
+        return;
+      }
       const id = await createFromDraft(d);
       toast('Livro adicionado à estante 📚');
       nav(`/livro/${id}`, { replace: true });
@@ -137,12 +54,43 @@ export default function AddBook() {
     }
   };
 
-  if (step === 'form') {
+  const inputs = (
+    <>
+      <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = ''; }} />
+      <input ref={gallery} type="file" accept="image/*" className="hidden" onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = ''; }} />
+    </>
+  );
+
+  if (step === 'recorte' && photo) {
     return (
       <div>
-        <PageTitle>Confirmar livro</PageTitle>
+        <PageTitle>Recortar a capa</PageTitle>
+        <CoverStep
+          photo={photo}
+          onRetake={() => camera.current?.click()}
+          onDone={(cover, a) => {
+            setDraft({ title: a?.title ?? '', authors: a?.authors ?? [], coverBlob: cover });
+            setStep('dados');
+          }}
+        />
+        {inputs}
+      </div>
+    );
+  }
+
+  if (step === 'dados') {
+    return (
+      <div>
+        <PageTitle>Dados do livro</PageTitle>
         <ErrorBox error={error} />
-        <div className="card"><BookForm initial={draft} onSave={save} onCancel={() => setStep('menu')} saveLabel="Adicionar à estante" /></div>
+        {draft.title ? (
+          <div className="alert info small">✨ A IA leu o título e o autor na capa. Confira e corrija se precisar.</div>
+        ) : (
+          <div className="alert info small">Digite o título e o autor do livro.</div>
+        )}
+        <div className="card">
+          <BookForm key={draft.title} initial={draft} withSummary onSave={save} onCancel={() => setStep('foto')} saveLabel="Adicionar à estante" />
+        </div>
       </div>
     );
   }
@@ -151,53 +99,22 @@ export default function AddBook() {
     <div>
       <PageTitle>Adicionar livro</PageTitle>
       <ErrorBox error={error} />
-      {busy && <div className="alert info">⏳ {busy}</div>}
-
-      {step === 'scan' ? (
-        <div className="card">
-          <h3>Aponte para o código de barras</h3>
-          <BarcodeScanner onCode={(c) => { setStep('menu'); void byIsbn(c); }} />
-          <p className="small muted mt">O código fica no verso do livro, perto do preço (começa com 978 ou 979).</p>
-          <button className="secondary block" onClick={() => setStep('menu')}>Cancelar</button>
-        </div>
-      ) : (
-        <div className="card stack">
-          <button className="block" onClick={() => { setError(null); setStep('scan'); }}>▦ Escanear código de barras (ISBN)</button>
-          <CaptureButton accept="image/*" className="secondary block" onFile={fromCoverPhoto}>📷 Tirar foto da capa</CaptureButton>
-          <form className="row nowrap" onSubmit={(e) => { e.preventDefault(); if (isbnInput.trim()) void byIsbn(isbnInput); }}>
-            <input inputMode="numeric" placeholder="Digitar ISBN" value={isbnInput} onChange={(e) => setIsbnInput(e.target.value)} />
-            <button type="submit" className="secondary">OK</button>
-          </form>
+      <div className="card stack center">
+        <div style={{ fontSize: '3.4rem' }}>📷</div>
+        <h2>Tire uma foto da capa</h2>
+        <p className="small muted">
+          Coloque o livro sobre uma superfície e fotografe a capa inteira. O app recorta o fundo
+          {hasApiKey() ? ', e a IA lê o título e o autor para você.' : '. Depois é só digitar o título e o autor.'}
+        </p>
+        <button className="block" onClick={() => camera.current?.click()}>📷 Tirar foto do livro</button>
+        <button className="ghost small" onClick={() => gallery.current?.click()}>ou escolher uma foto da galeria</button>
+      </div>
+      {!hasApiKey() && (
+        <div className="alert info small">
+          💡 Para a IA ler a capa e buscar o resumo, cadastre sua chave em <Link to="/configuracoes">Ajustes</Link>.
         </div>
       )}
-
-      <div className="card">
-        <h3>Buscar por título ou autor</h3>
-        <form className="row nowrap" onSubmit={(e) => { e.preventDefault(); if (query.trim()) void search(query); }}>
-          <input type="search" placeholder="Ex.: Torto Arado Itamar" value={query} onChange={(e) => setQuery(e.target.value)} />
-          <button type="submit">Buscar</button>
-        </form>
-        {step === 'search' && results.length > 0 && (
-          <div className="mt">
-            <p className="small muted">Toque no livro certo:</p>
-            {results.map((r, i) => (
-              <button key={i} className="list-item" onClick={() => pick(r)}
-                style={{ background: 'none', color: 'inherit', borderRadius: 0, width: '100%', textAlign: 'left', fontWeight: 400, justifyContent: 'flex-start' }}>
-                <div style={{ width: 52, flex: 'none' }}><Cover book={{ title: r.title, authors: r.authors, coverUrl: r.coverUrl, favorite: false }} /></div>
-                <div className="grow">
-                  <b>{r.title}</b>
-                  <div className="small muted">{r.authors.join(', ')}{r.year ? ` · ${r.year}` : ''}{r.publisher ? ` · ${r.publisher}` : ''}</div>
-                  <div className="small muted">{r.pageCount ? `${r.pageCount} páginas · ` : ''}{r.source}</div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <button className="secondary block" onClick={() => openDraft({ ...draft, title: draft.title || query, authors: draft.authors })}>
-        ✍️ Cadastrar manualmente
-      </button>
+      {inputs}
     </div>
   );
 }

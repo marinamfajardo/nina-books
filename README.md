@@ -16,13 +16,13 @@ Gerenciador pessoal de leituras: estante, classificação, sessões de leitura, 
 
 ## Onde configurar a chave da API (IA)
 
-Os resumos com IA, a leitura de texto de fotos com IA e os significados do glossário usam o Claude (Anthropic).
+A leitura da capa (título, autor e recorte), os resumos, a leitura de texto de fotos e os significados do glossário usam o Claude (Anthropic).
 
 1. Crie uma chave em https://console.anthropic.com/settings/keys (o uso é cobrado por consumo pela Anthropic).
 2. No app: **Ajustes › Inteligência artificial (Claude)** › cole a chave › **Salvar chave**.
 
 A chave fica guardada apenas no armazenamento local do aparelho e é enviada somente para a API da Anthropic. Ela nunca é colocada no código.
-Sem chave, tudo funciona — exceto os recursos de IA. O OCR passa a ser feito no próprio aparelho (Tesseract).
+Sem chave, tudo funciona — exceto os recursos de IA: no cadastro você ajusta o recorte da capa e digita título e autor. O OCR passa a ser feito no próprio aparelho (Tesseract).
 
 ## Tecnologia
 
@@ -33,10 +33,10 @@ O pedido original era um app nativo em React Native/Expo. Para instalar no iPhon
 | Interface | React 19 + TypeScript + Vite, React Router (HashRouter) |
 | Banco local | IndexedDB com **Dexie** (esquema versionado em `src/db.ts` — cada mudança vira uma nova `version()` com `upgrade()`) |
 | Fotos, áudios, vídeos | Guardados como arquivos (Blob) na tabela `media` do banco, referenciados pelos registros |
-| Código de barras | `@zxing/browser` (câmera traseira) |
+| Cadastro por foto | Foto da capa → IA (Claude com visão) acha os cantos e lê título/autor → recorte com correção de perspectiva no aparelho (`src/domain/perspective.ts`), cantos ajustáveis com o dedo |
 | Áudio / vídeo | `MediaRecorder` (áudio com pausar/continuar) e câmera nativa para vídeo |
 | OCR | Claude com visão (melhor com letra à mão) ou Tesseract.js no aparelho |
-| Busca de livros | Google Books API, com Open Library como alternativa |
+| Resumo e dados do livro | Claude com busca na web (resumo, editora, ano, páginas), ou resumo escrito pela leitora |
 | IA | `@anthropic-ai/sdk` no navegador, com a ferramenta de busca na web para os resumos |
 | Gráficos | Recharts |
 | Offline | Service worker (vite-plugin-pwa / Workbox) |

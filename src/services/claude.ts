@@ -88,6 +88,11 @@ export async function generateSummary(book: Pick<Book, 'title' | 'authors' | 'ye
       'estilo e contexto da obra. Avise com "⚠️ Contém spoilers" antes de revelar o final, se for o caso. ' +
       'Responda só com o resumo, sem títulos nem lista de fontes.',
   });
+  if (!text) throw new AIError('A IA não conseguiu gerar o resumo. Tente novamente.');
+  return { text, sources: collectSources(blocks) };
+}
+
+function collectSources(blocks: Block[]) {
   const sources = new Map<string, string>();
   for (const b of blocks) {
     if (b.type === 'web_search_tool_result' && Array.isArray(b.content)) {
@@ -99,8 +104,7 @@ export async function generateSummary(book: Pick<Book, 'title' | 'authors' | 'ye
       }
     }
   }
-  if (!text) throw new AIError('A IA não conseguiu gerar o resumo. Tente novamente.');
-  return { text, sources: [...sources].slice(0, 8).map(([url, title]) => ({ url, title })) };
+  return [...sources].slice(0, 8).map(([url, title]) => ({ url, title }));
 }
 
 const imageBlock = (b64: string, mediaType: string) => ({
@@ -125,18 +129,93 @@ export async function ocrWithClaude(b64: string, mediaType: string) {
   return text === '(sem texto legível)' ? '' : text;
 }
 
-/** Lê título e autor de uma foto de capa. */
-export async function readCover(b64: string, mediaType: string) {
+/** Extrai o primeiro objeto JSON de uma resposta de texto. */
+function parseJson<T>(text: string): T | null {
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) return null;
+  try {
+    return JSON.parse(m[0]) as T;
+  } catch {
+    return null;
+  }
+}
+
+export interface CoverAnalysis {
+  title: string;
+  authors: string[];
+  /** Cantos da capa em frações (0–1) da largura/altura: sup-esq, sup-dir, inf-dir, inf-esq */
+  corners: [number, number][] | null;
+}
+
+/** Lê título e autor e localiza os cantos da capa na foto. */
+export async function analyzeCover(b64: string, mediaType: string): Promise<CoverAnalysis> {
   const { text } = await ask({
-    system: 'Você identifica livros a partir de fotos de capa.',
-    maxTokens: 2000,
+    system: 'Você identifica livros a partir de fotos e localiza a capa na imagem com precisão.',
+    maxTokens: 4000,
     content: [
       imageBlock(b64, mediaType),
-      { type: 'text', text: 'Qual é o título e o autor deste livro? Responda numa única linha no formato: título | autor' },
+      {
+        type: 'text',
+        text:
+          'Esta é a foto de um livro. Responda só com JSON neste formato:\n' +
+          '{"titulo": "...", "autores": ["..."], "cantos": [[x,y],[x,y],[x,y],[x,y]]}\n' +
+          '- titulo e autores: exatamente como aparecem na capa (sem inventar; use "" ou [] se não der para ler).\n' +
+          '- cantos: os 4 cantos da CAPA do livro (só a capa da frente, sem o fundo, a mesa ou a mão), na ordem ' +
+          'superior esquerdo, superior direito, inferior direito, inferior esquerdo, com x e y como frações de 0 a 1 ' +
+          'da largura e da altura da foto. Use null se não encontrar a capa.',
+      },
     ],
   });
-  const [title, author] = text.split('|').map((s) => s.trim());
-  return { title: title ?? '', author: author ?? '' };
+  const j = parseJson<{ titulo?: string; autores?: string[] | string; cantos?: [number, number][] | null }>(text);
+  if (!j) throw new AIError('A IA não conseguiu ler a capa. Preencha o título e o autor à mão.');
+  const authors = Array.isArray(j.autores) ? j.autores : j.autores ? [j.autores] : [];
+  const ok = Array.isArray(j.cantos) && j.cantos.length === 4 &&
+    j.cantos.every((p) => Array.isArray(p) && p.every((v) => typeof v === 'number' && v >= -0.05 && v <= 1.05));
+  return {
+    title: (j.titulo ?? '').trim(),
+    authors: authors.map((a) => a.trim()).filter(Boolean),
+    corners: ok ? j.cantos!.map(([x, y]) => [Math.min(1, Math.max(0, x)), Math.min(1, Math.max(0, y))] as [number, number]) : null,
+  };
+}
+
+export interface BookResearch {
+  summary: string;
+  sources: { title: string; url: string }[];
+  publisher?: string;
+  year?: number;
+  pageCount?: number;
+  originalLanguage?: string;
+  synopsis?: string;
+}
+
+/** Pesquisa o livro na internet: resumo em português e dados da edição. */
+export async function researchBook(title: string, authors: string[]): Promise<BookResearch> {
+  const desc = `"${title}"${authors.length ? ` de ${authors.join(', ')}` : ''}`;
+  const { text, blocks } = await ask({
+    webSearch: true,
+    system:
+      'Você ajuda uma leitora a organizar sua biblioteca pessoal. Escreva sempre em português do Brasil, ' +
+      'em tom acolhedor e claro. Use a busca na web para confirmar os fatos sobre o livro antes de escrever.',
+    content:
+      `Pesquise o livro ${desc}. Depois responda só com JSON neste formato:\n` +
+      '{"resumo": "...", "editora": "...", "ano": 0, "paginas": 0, "idioma_original": "...", "sinopse": "..."}\n' +
+      '- resumo: 3 a 5 parágrafos (separados por \\n\\n) sobre premissa, temas, estilo e contexto da obra; ' +
+      'avise "⚠️ Contém spoilers" antes de revelar o final, se for o caso.\n' +
+      '- editora, ano e paginas: da edição brasileira, se existir; senão da original. Use null se não souber.\n' +
+      '- idioma_original em português (ex.: "Inglês"). sinopse: a sinopse oficial curta, se encontrar, senão null.',
+  });
+  const j = parseJson<{ resumo?: string; editora?: string | null; ano?: number | null; paginas?: number | null; idioma_original?: string | null; sinopse?: string | null }>(text);
+  const summary = (j?.resumo ?? (j ? '' : text)).trim();
+  if (!summary) throw new AIError('A IA não encontrou informações sobre esse livro. Você pode escrever o resumo.');
+  return {
+    summary,
+    sources: collectSources(blocks),
+    publisher: j?.editora || undefined,
+    year: j?.ano && j.ano > 0 ? j.ano : undefined,
+    pageCount: j?.paginas && j.paginas > 0 ? j.paginas : undefined,
+    originalLanguage: j?.idioma_original || undefined,
+    synopsis: j?.sinopse || undefined,
+  };
 }
 
 /** Significado de uma palavra para o glossário. */

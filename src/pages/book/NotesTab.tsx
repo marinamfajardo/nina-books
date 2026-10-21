@@ -77,8 +77,10 @@ function MediaPlayer({ note }: { note: Note }) {
 
 type Draft = { kind: Note['kind']; title: string; text: string; page: string; blob?: Blob; seconds?: number };
 
-export function NotesTab({ bookId }: { bookId: string }) {
-  const notes = useLiveQuery(() => db.notes.where('bookId').equals(bookId).reverse().sortBy('createdAt'), [bookId]) ?? [];
+/** mode "texto": anotações escritas · mode "midia": áudios e vídeos do livro */
+export function NotesTab({ bookId, mode }: { bookId: string; mode: 'texto' | 'midia' }) {
+  const all = useLiveQuery(() => db.notes.where('bookId').equals(bookId).reverse().sortBy('createdAt'), [bookId]) ?? [];
+  const notes = all.filter((n) => (mode === 'texto' ? n.kind === 'texto' : n.kind !== 'texto'));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState<Note | null>(null);
   const toast = useToast();
@@ -93,7 +95,7 @@ export function NotesTab({ bookId }: { bookId: string }) {
       mediaId, page: draft.page ? Number(draft.page) : undefined, createdAt: nowIso(),
     });
     setDraft(null);
-    toast('Anotação salva');
+    toast(draft.kind === 'texto' ? 'Anotação salva' : draft.kind === 'audio' ? 'Áudio salvo no livro 🎙️' : 'Vídeo salvo no livro 🎥');
   };
 
   const remove = async (n: Note) => {
@@ -106,13 +108,30 @@ export function NotesTab({ bookId }: { bookId: string }) {
 
   return (
     <div>
-      <div className="grid3" style={{ marginBottom: 14 }}>
-        <button onClick={() => setDraft(blank('texto'))}>✍️ Texto</button>
-        <button onClick={() => setDraft(blank('audio'))}>🎙️ Áudio</button>
-        <CaptureButton accept="video/*" className="" onFile={(f) => setDraft({ ...blank('video'), blob: f })}>🎥 Vídeo</CaptureButton>
-      </div>
+      {mode === 'texto' ? (
+        <button className="block" style={{ marginBottom: 14 }} onClick={() => setDraft(blank('texto'))}>✍️ Nova anotação</button>
+      ) : (
+        <div style={{ marginBottom: 14 }}>
+          <div className="grid2">
+            <button onClick={() => setDraft(blank('audio'))}>🎙️ Gravar áudio</button>
+            <CaptureButton accept="video/*" className="" onFile={(f) => setDraft({ ...blank('video'), blob: f })}>🎥 Gravar vídeo</CaptureButton>
+          </div>
+          <div className="center">
+            <CaptureButton accept="video/*,audio/*" capture={false} className="ghost small" onFile={(f) => setDraft({ ...blank(f.type.startsWith('audio') ? 'audio' : 'video'), blob: f, title: f.name.replace(/\.[^.]+$/, '') })}>
+              ou escolher um vídeo/áudio já gravado
+            </CaptureButton>
+          </div>
+          <p className="small muted center" style={{ margin: 0 }}>Os áudios e vídeos ficam guardados aqui no livro, no próprio aparelho.</p>
+        </div>
+      )}
 
-      {notes.length === 0 && <div className="empty">Nenhuma anotação ainda. Registre o que você pensou durante a leitura — por texto, áudio ou vídeo.</div>}
+      {notes.length === 0 && (
+        <div className="empty">
+          {mode === 'texto'
+            ? 'Nenhuma anotação ainda. Escreva o que você pensou durante a leitura.'
+            : 'Nenhum áudio ou vídeo ainda. Grave suas impressões sobre o livro!'}
+        </div>
+      )}
       <div className="timeline">
         {notes.map((n) => (
           <div className="ev card" key={n.id}>

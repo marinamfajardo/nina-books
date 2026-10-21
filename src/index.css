@@ -300,3 +300,14 @@ label.field > span { display: block; font-size: 0.82rem; font-weight: 700; color
 .timer { font-family: var(--serif); font-size: 2.6rem; text-align: center; color: var(--primary); font-variant-numeric: tabular-nums; }
 .rec-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--vermelho); display: inline-block; animation: pulse 1s infinite; }
 @keyframes pulse { 50% { opacity: 0.3; } }
+
+/* ---------- Recorte da capa ---------- */
+.cropper { position: relative; width: 100%; max-width: 520px; margin: 0 auto; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 12px; overflow: hidden; background: #000; max-height: 70dvh; }
+.cropper img { width: 100%; height: 100%; object-fit: fill; display: block; pointer-events: none; }
+.cropper svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cropper .handle {
+  position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+  background: rgba(179, 38, 62, 0.35); border: 3px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.5); touch-action: none; cursor: grab;
+}
+.cover-preview { width: 150px; margin: 0 auto; }
+.summary-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }

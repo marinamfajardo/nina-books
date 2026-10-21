@@ -16,7 +16,7 @@ import { ReadingTab } from './ReadingTab';
 import { SummaryTab } from './SummaryTab';
 
 const TABS = [
-  ['geral', 'Visão geral'], ['resumo', 'Resumo e resenha'], ['leitura', 'Leitura'], ['notas', 'Anotações'],
+  ['geral', 'Visão geral'], ['resumo', 'Resumo e resenha'], ['leitura', 'Leitura'], ['midia', 'Áudios e vídeos'], ['notas', 'Anotações'],
   ['citacoes', 'Citações'], ['fotos', 'Fotos'], ['glossario', 'Glossário'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
@@ -131,7 +131,8 @@ export default function BookDetail() {
       )}
       {tab === 'resumo' && <SummaryTab book={book} />}
       {tab === 'leitura' && <ReadingTab book={book} sessions={sessions} readings={readings} />}
-      {tab === 'notas' && <NotesTab bookId={book.id} />}
+      {tab === 'midia' && <NotesTab bookId={book.id} mode="midia" />}
+      {tab === 'notas' && <NotesTab bookId={book.id} mode="texto" />}
       {tab === 'citacoes' && <QuotesTab bookId={book.id} />}
       {tab === 'fotos' && <PhotosTab bookId={book.id} />}
       {tab === 'glossario' && <BookGlossaryTab book={book} />}
