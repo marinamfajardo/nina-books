@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { enqueueAll, fetchMissingMedia, pendingCount, syncNow, type SyncBackend } from './engine';
+import { applySyncedPrefs } from '../services/prefs';
 import { currentUser, supabase, supabaseBackend, SyncError } from './supabase';
 
 export type SyncState =
@@ -48,6 +49,7 @@ export async function runSync() {
   try {
     const r = await syncNow(b);
     lastSkipped = r.skippedMedia;
+    await applySyncedPrefs();
     set({ kind: 'ok', at: new Date().toISOString(), pending: await pendingCount() });
   } catch (e) {
     set({ kind: 'error', message: e instanceof SyncError ? e.message : `Erro ao sincronizar: ${(e as Error).message}` });

@@ -157,6 +157,12 @@ export interface OutboxItem {
   t?: number;
 }
 
+/** Preferências que vão junto na sincronização (ex.: qual IA usar e a chave) */
+export interface Pref {
+  id: string;
+  [k: string]: unknown;
+}
+
 export interface ListItem {
   id: string;
   kind: ListKind;
@@ -177,6 +183,7 @@ export class NinaDB extends Dexie {
   media!: EntityTable<Media, 'id'>;
   lists!: EntityTable<ListItem, 'id'>;
   _outbox!: EntityTable<OutboxItem, 'k'>;
+  prefs!: EntityTable<Pref, 'id'>;
 
   constructor(name = 'nina-books') {
     super(name);
@@ -198,6 +205,8 @@ export class NinaDB extends Dexie {
     });
     // v2: fila de sincronização entre aparelhos
     this.version(2).stores({ _outbox: 'k' });
+    // v3: preferências sincronizadas
+    this.version(3).stores({ prefs: 'id' });
     installOutbox(this);
   }
 }
@@ -206,7 +215,7 @@ export const db = new NinaDB();
 
 export const TABLES = [
   'books', 'readings', 'sessions', 'notes', 'quotes', 'photos',
-  'glossary', 'goals', 'loans', 'wishlist', 'lists',
+  'glossary', 'goals', 'loans', 'wishlist', 'lists', 'prefs',
 ] as const;
 
 /** Tabelas sincronizadas entre aparelhos (media leva só os dados; o arquivo vai para o armazenamento) */

@@ -3,7 +3,7 @@ import Dexie, { type DBCore, type DBCoreMutateRequest, type DBCoreTable } from '
 /** Tabelas cujas mudanças vão para a nuvem. */
 const TRACKED = new Set([
   'books', 'readings', 'sessions', 'notes', 'quotes', 'photos',
-  'glossary', 'goals', 'loans', 'wishlist', 'lists', 'media',
+  'glossary', 'goals', 'loans', 'wishlist', 'lists', 'media', 'prefs',
 ]);
 const OUTBOX = '_outbox';
 let seq = 0;

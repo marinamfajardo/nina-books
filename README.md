@@ -30,15 +30,15 @@ Como funciona: toda gravação local entra numa fila (`_outbox`, via middleware 
 
 > Sem a sincronização, os dados ficam só no aparelho: use **Ajustes › Backup e CSV** e não apague o ícone da tela de início sem backup (no iOS isso apaga os dados).
 
-## Onde configurar a chave da API (IA)
+## Onde configurar a IA
 
-A leitura da capa (título, autor e recorte), os resumos, a leitura de texto de fotos e os significados do glossário usam o Claude (Anthropic).
+A leitura da capa (título, autor e recorte), os resumos, a leitura de texto de fotos e os significados do glossário usam IA. Em **Ajustes › Inteligência artificial** escolha:
 
-1. Crie uma chave em https://console.anthropic.com/settings/keys (o uso é cobrado por consumo pela Anthropic).
-2. No app: **Ajustes › Inteligência artificial (Claude)** › cole a chave › **Salvar chave**.
+- **Gemini (Google) — grátis:** crie a chave em https://aistudio.google.com/apikey (só precisa de conta Google, sem cartão). O plano gratuito tem limite de usos por minuto/dia e o Google pode usar o conteúdo enviado para melhorar os serviços. Se a busca no Google não estiver liberada para a chave, o resumo é feito sem pesquisa (o app avisa).
+- **Claude (Anthropic) — pago:** chave em https://console.anthropic.com/settings/keys, cobrada por consumo.
 
-A chave fica guardada apenas no armazenamento local do aparelho e é enviada somente para a API da Anthropic. Ela nunca é colocada no código.
-Sem chave, tudo funciona — exceto os recursos de IA: no cadastro você ajusta o recorte da capa e digita título e autor. O OCR passa a ser feito no próprio aparelho (Tesseract).
+A chave fica no aparelho e, com a sincronização ligada, vai junto para o outro aparelho (fica na sua conta, protegida). Ela nunca é colocada no código.
+Sem IA, tudo funciona: no cadastro você ajusta o recorte da capa e digita título e autor; o OCR é feito no próprio aparelho (Tesseract).
 
 ## Tecnologia
 
@@ -53,7 +53,7 @@ O pedido original era um app nativo em React Native/Expo. Para instalar no iPhon
 | Áudio / vídeo | `MediaRecorder` (áudio com pausar/continuar) e câmera nativa para vídeo |
 | OCR | Claude com visão (melhor com letra à mão) ou Tesseract.js no aparelho |
 | Resumo e dados do livro | Claude com busca na web (resumo, editora, ano, páginas), ou resumo escrito pela leitora |
-| IA | `@anthropic-ai/sdk` no navegador, com a ferramenta de busca na web para os resumos |
+| IA | Gemini (`gemini-flash-latest`, REST, com Google Search) ou Claude (`@anthropic-ai/sdk`, com busca na web) — escolha em Ajustes |
 | Gráficos | Recharts |
 | Offline | Service worker (vite-plugin-pwa / Workbox) |
 | Backup | `.zip` com `data.json` + pasta `media/` (JSZip); CSV com PapaParse |

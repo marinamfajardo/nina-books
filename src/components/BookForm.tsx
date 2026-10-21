@@ -18,6 +18,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
   const [mode, setMode] = useState<'ia' | 'manual' | null>(d.summaryAI ? 'ia' : d.summaryManual ? 'manual' : null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [noWeb, setNoWeb] = useState(false);
 
   const search = async () => {
     setMode('ia');
@@ -25,6 +26,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
     setBusy(true);
     try {
       const r = await researchBook(d.title, authors);
+      setNoWeb(!r.searchedWeb);
       // só completa os campos que ainda estão vazios
       set({
         summaryAI: r.summary, summaryAISources: r.sources, summaryAIDate: new Date().toISOString(),
@@ -53,6 +55,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
       {mode === 'ia' && d.summaryAI && (
         <div className="mt">
           <span className="badge ai">✨ gerado por IA — pode editar</span>
+          {noWeb && <p className="small muted" style={{ margin: '6px 0 0' }}>⚠️ Desta vez a IA não conseguiu pesquisar na internet e escreveu com o que já sabe. Confira as informações.</p>}
           <textarea className="mt" rows={10} style={{ minHeight: 220 }} value={d.summaryAI} onChange={(e) => set({ summaryAI: e.target.value })} />
           {d.summaryAISources?.length ? <p className="small muted">Fontes: {d.summaryAISources.map((s) => s.title).slice(0, 3).join(' · ')}</p> : null}
           <p className="small muted">A IA também completou editora, ano e páginas quando encontrou. Confira abaixo.</p>

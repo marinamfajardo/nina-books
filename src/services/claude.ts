@@ -1,14 +1,23 @@
 import Anthropic from '@anthropic-ai/sdk';
 import type { Book } from '../db';
 
+import { askGemini, getGeminiKey } from './gemini';
+
 const KEY_STORAGE = 'nina.anthropicKey';
+const PROVIDER_KEY = 'nina.aiProvider';
 const MODEL = 'claude-opus-5-5';
 
-// A chave fica só neste aparelho (armazenamento local do app). Nunca vai no código.
+/** Qual IA o app usa: Gemini (Google, tem uso gratuito) ou Claude (Anthropic, pago). */
+export type AIProvider = 'gemini' | 'claude';
+export const getProvider = (): AIProvider => (localStorage.getItem(PROVIDER_KEY) as AIProvider) || 'gemini';
+export const setProvider = (p: AIProvider) => localStorage.setItem(PROVIDER_KEY, p);
+
+// As chaves ficam só neste aparelho (armazenamento local do app). Nunca vão no código.
 export const getApiKey = () => localStorage.getItem(KEY_STORAGE) ?? '';
 export const setApiKey = (key: string) =>
   key ? localStorage.setItem(KEY_STORAGE, key.trim()) : localStorage.removeItem(KEY_STORAGE);
-export const hasApiKey = () => !!getApiKey();
+/** Há uma IA pronta para usar (chave da IA escolhida). */
+export const hasApiKey = () => (getProvider() === 'gemini' ? !!getGeminiKey() : !!getApiKey());
 
 export class AIError extends Error {}
 
@@ -36,12 +45,29 @@ type Block = Anthropic.Messages.ContentBlock;
 const textOf = (content: Block[]) =>
   content.filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text').map((b) => b.text).join('').trim();
 
-async function ask(params: {
+export interface AskParams {
   system: string;
   content: Anthropic.Messages.MessageParam['content'];
   webSearch?: boolean;
   maxTokens?: number;
-}) {
+}
+export interface AskResult { text: string; sources: { title: string; url: string }[]; searched: boolean }
+
+/** Pergunta à IA escolhida em Ajustes. */
+async function ask(params: AskParams): Promise<AskResult> {
+  if (!navigator.onLine) throw new AIError('Sem internet. A IA precisa de conexão.');
+  if (getProvider() === 'gemini') {
+    try {
+      return await askGemini(params);
+    } catch (e) {
+      throw new AIError((e as Error).message);
+    }
+  }
+  const { text, blocks } = await askClaude(params);
+  return { text, sources: collectSources(blocks), searched: !!params.webSearch };
+}
+
+async function askClaude(params: AskParams) {
   const c = client();
   const tools: Anthropic.Messages.ToolUnion[] | undefined = params.webSearch
     ? [{ type: 'web_search_20260209', name: 'web_search', max_uses: 6 } as unknown as Anthropic.Messages.ToolUnion]
@@ -78,7 +104,7 @@ async function ask(params: {
 /** Resumo do livro em português, pesquisado na web, com as fontes usadas. */
 export async function generateSummary(book: Pick<Book, 'title' | 'authors' | 'year' | 'isbn'>) {
   const desc = `"${book.title}"${book.authors.length ? ` de ${book.authors.join(', ')}` : ''}${book.year ? ` (${book.year})` : ''}${book.isbn ? `, ISBN ${book.isbn}` : ''}`;
-  const { text, blocks } = await ask({
+  const { text, sources } = await ask({
     webSearch: true,
     system:
       'Você ajuda uma leitora a organizar sua biblioteca pessoal. Escreva sempre em português do Brasil, ' +
@@ -89,7 +115,7 @@ export async function generateSummary(book: Pick<Book, 'title' | 'authors' | 'ye
       'Responda só com o resumo, sem títulos nem lista de fontes.',
   });
   if (!text) throw new AIError('A IA não conseguiu gerar o resumo. Tente novamente.');
-  return { text, sources: collectSources(blocks) };
+  return { text, sources };
 }
 
 function collectSources(blocks: Block[]) {
@@ -180,6 +206,8 @@ export async function analyzeCover(b64: string, mediaType: string): Promise<Cove
 
 export interface BookResearch {
   summary: string;
+  /** false quando a IA não conseguiu pesquisar na internet e escreveu só com o que sabe */
+  searchedWeb: boolean;
   sources: { title: string; url: string }[];
   publisher?: string;
   year?: number;
@@ -191,7 +219,7 @@ export interface BookResearch {
 /** Pesquisa o livro na internet: resumo em português e dados da edição. */
 export async function researchBook(title: string, authors: string[]): Promise<BookResearch> {
   const desc = `"${title}"${authors.length ? ` de ${authors.join(', ')}` : ''}`;
-  const { text, blocks } = await ask({
+  const { text, sources, searched } = await ask({
     webSearch: true,
     system:
       'Você ajuda uma leitora a organizar sua biblioteca pessoal. Escreva sempre em português do Brasil, ' +
@@ -209,7 +237,8 @@ export async function researchBook(title: string, authors: string[]): Promise<Bo
   if (!summary) throw new AIError('A IA não encontrou informações sobre esse livro. Você pode escrever o resumo.');
   return {
     summary,
-    sources: collectSources(blocks),
+    sources,
+    searchedWeb: searched,
     publisher: j?.editora || undefined,
     year: j?.ano && j.ano > 0 ? j.ano : undefined,
     pageCount: j?.paginas && j.paginas > 0 ? j.paginas : undefined,

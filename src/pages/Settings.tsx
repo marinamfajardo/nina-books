@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { PageTitle, useToast } from '../components/ui';
+import { PageTitle } from '../components/ui';
 import type { ListKind } from '../db';
 import { ensureListItems, renameListItem } from '../data/actions';
 import { useList } from '../data/hooks';
-import { getApiKey, setApiKey } from '../services/claude';
+import AISettings from './AISettings';
 import { getOcrEngine, setOcrEngine, type OcrEngine } from '../services/ocr';
 import { applyTheme, getTheme, type Theme } from '../theme';
 import SyncSettings from './SyncSettings';
@@ -33,10 +33,7 @@ function ListManager({ kind, title }: { kind: ListKind; title: string }) {
 }
 
 export default function Settings() {
-  const toast = useToast();
   const [theme, setThemeState] = useState<Theme>(getTheme());
-  const [key, setKey] = useState(getApiKey());
-  const [show, setShow] = useState(false);
   const [ocr, setOcr] = useState<OcrEngine>(getOcrEngine());
 
   return (
@@ -67,26 +64,12 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="card stack">
-        <h3>Inteligência artificial (Claude)</h3>
-        <p className="small">
-          A IA gera resumos, lê o texto das fotos e explica palavras do glossário. Para usar, crie uma chave em{' '}
-          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>{' '}
-          (o uso é cobrado pela Anthropic, por consumo) e cole aqui.
-        </p>
-        <div className="row nowrap">
-          <input type={show ? 'text' : 'password'} placeholder="sk-ant-…" value={key} onChange={(e) => setKey(e.target.value)} autoComplete="off" spellCheck={false} />
-          <button className="icon" onClick={() => setShow(!show)} aria-label="Mostrar chave">{show ? '🙈' : '👁'}</button>
-        </div>
-        <div className="row">
-          <button className="grow" onClick={() => { setApiKey(key); toast(key ? 'Chave salva neste aparelho 🔒' : 'Chave removida'); }}>Salvar chave</button>
-          {getApiKey() && <button className="danger" onClick={() => { setApiKey(''); setKey(''); toast('Chave removida'); }}>Remover</button>}
-        </div>
-        <p className="small muted">🔒 A chave fica guardada só neste aparelho e é enviada apenas para a Anthropic.</p>
+      <AISettings />
 
+      <div className="card stack">
         <label className="field"><span>Leitura de texto das fotos (OCR)</span>
           <select value={ocr} onChange={(e) => { const v = e.target.value as OcrEngine; setOcr(v); setOcrEngine(v); }}>
-            <option value="auto">Automático (IA quando houver chave e internet)</option>
+            <option value="auto">Automático (IA quando estiver configurada e com internet)</option>
             <option value="aparelho">Sempre no aparelho (grátis, funciona offline após a 1ª vez)</option>
             <option value="claude">Sempre com a IA (melhor para letra à mão)</option>
           </select>

@@ -65,7 +65,7 @@ export function SummaryTab({ book }: { book: Book }) {
             {book.summaryAIDate && <p className="small muted">Gerado em {fmtDateTime(book.summaryAIDate)}. Confira as informações — a IA pode errar.</p>}
           </div>
         ) : (
-          <p className="small muted mt">O Claude pesquisa o livro na internet e escreve um resumo em português, com as fontes.</p>
+          <p className="small muted mt">A IA pesquisa o livro na internet e escreve um resumo em português, com as fontes.</p>
         )}
         {hasApiKey() ? (
           <button className="secondary mt" onClick={generate} disabled={loading}>✨ {book.summaryAI ? 'Gerar de novo' : 'Gerar resumo com IA'}</button>
