@@ -11,6 +11,9 @@ import { GroupBooks, GroupList } from './pages/Groups';
 import Settings from './pages/Settings';
 import Shelf from './pages/Shelf';
 import Stats from './pages/Stats';
+import Achievements, { MedalCelebration } from './pages/Achievements';
+import Retrospective from './pages/Retrospective';
+import Inspiration, { AllQuotes } from './pages/Inspiration';
 import Ranking, { AuthorList, AuthorPage } from './pages/Ranking';
 import { SyncStatusBadge } from './pages/SyncSettings';
 import { useAutoSync } from './sync/useSync';
@@ -26,6 +29,7 @@ function Shell() {
   return (
     <div className="app">
       <ScrollTop />
+      <MedalCelebration />
       <header className="topbar">
         <Link to="/" className="logo"><Logo /> Nina <span>Book's</span></Link>
         <span className="spacer" />
@@ -47,6 +51,11 @@ function Shell() {
           <Route path="/desejos" element={<Wishlist />} />
           <Route path="/backup" element={<Backup />} />
           <Route path="/ranking" element={<Ranking />} />
+          <Route path="/conquistas" element={<Achievements />} />
+          <Route path="/retrospectiva" element={<Retrospective />} />
+          <Route path="/inspiracao" element={<Inspiration />} />
+          <Route path="/citacoes" element={<AllQuotes />} />
+          <Route path="/retrospectiva/:year" element={<Retrospective />} />
           <Route path="/autores" element={<AuthorList />} />
           <Route path="/autor/:name" element={<AuthorPage />} />
           <Route path="*" element={<div className="empty">Página não encontrada. <Link to="/">Ir para a estante</Link></div>} />

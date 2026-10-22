@@ -30,6 +30,18 @@ Como funciona: toda gravação local entra numa fila (`_outbox`, via middleware 
 
 > Sem a sincronização, os dados ficam só no aparelho: use **Ajustes › Backup e CSV** e não apague o ícone da tela de início sem backup (no iOS isso apaga os dados).
 
+## Notificações diárias
+
+- **9h:** uma das suas citações ou uma palavra do glossário, com o livro de origem.
+- **21h:** "Saia do celular e vá ler", com um estudo sobre os benefícios da leitura.
+
+Como funciona: cada aparelho que ativa as notificações (Ajustes › Notificações diárias) guarda a inscrição em `prefs` (sincronizada).
+O GitHub Actions ([`.github/workflows/notificacoes.yml`](.github/workflows/notificacoes.yml)) roda às 12:00 e 00:00 UTC, busca as inscrições
+pela função `nina_push_targets` ([`supabase/push.sql`](supabase/push.sql)) e envia um Web Push; o service worker (`src/sw.ts`) monta a
+mensagem com os dados do próprio aparelho. Requisitos: rodar `supabase/push.sql` uma vez e criar o segredo **`NINA_PUSH`** no GitHub
+(Settings › Secrets and variables › Actions) com `{"privateKey": "...", "secret": "..."}`. No iPhone/iPad (iOS 16.4+) só funciona com o app
+instalado na tela de início. O GitHub pode atrasar tarefas agendadas alguns minutos e as desativa após 60 dias sem atividade no repositório.
+
 ## Onde configurar a IA
 
 A leitura da capa (título, autor e recorte), os resumos, a leitura de texto de fotos e os significados do glossário usam IA. Em **Ajustes › Inteligência artificial** escolha:

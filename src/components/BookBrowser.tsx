@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import type { Book, Format, Status } from '../db';
 import { useLibrary, useList, type BookMeta } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL, STATUSES } from '../domain/constants';
-import { applyFilters, countActive, SORT_LABEL, sortBooks, type Filters, type SortKey } from '../domain/filters';
+import { applyFilters, countActive, seriesBooks, SORT_LABEL, sortBooks, type Filters, type SortKey } from '../domain/filters';
 import { ChipSelect, Cover, Icon, Modal, Stars } from './ui';
 
 const VIEW_KEY = 'nina.view';
@@ -174,6 +174,30 @@ export function BookBrowser({ base = {}, hide = [] }: { base?: Filters; hide?: (
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+/** Faixa com os livros da mesma saga (capas pequenas, com estrelas). */
+export function SeriesStrip({ book, books }: { book: Book; books: Book[] }) {
+  const list = seriesBooks(books, book.series);
+  if (!book.series || list.length < 2) return null;
+  return (
+    <div className="card mt series-strip">
+      <div className="row between">
+        <h3 style={{ margin: 0 }}>📚 Saga {book.series}</h3>
+        <Link to={`/grupo/serie/${encodeURIComponent(book.series)}`} className="small">ver todos</Link>
+      </div>
+      <div className="strip">
+        {list.map((b) => (
+          <Link key={b.id} to={`/livro/${b.id}`} className={`strip-item${b.id === book.id ? ' current' : ''}`} aria-current={b.id === book.id}>
+            <Cover book={b} />
+            <div className="small" style={{ fontWeight: 700, marginTop: 4 }}>{b.seriesNumber ? `Vol. ${b.seriesNumber}` : ''}</div>
+            <div className="small ellipsis">{b.title}</div>
+            {b.rating > 0 ? <Stars value={b.rating} /> : <span className="small muted">{STATUS_LABEL[b.status]}</span>}
+          </Link>
+        ))}
+      </div>
     </div>
   );
 }

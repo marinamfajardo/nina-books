@@ -21,6 +21,9 @@ export interface Book {
   coverUrl?: string;
   originalLanguage?: string;
   synopsis?: string;
+  /** Série ou saga (ex.: "Harry Potter") e o número do volume */
+  series?: string;
+  seriesNumber?: number;
   status: Status;
   favorite: boolean;
   /** 0 a 10 (meias estrelas) */

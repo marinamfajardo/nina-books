@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { SeriesStrip } from '../../components/BookBrowser';
 import { BookForm } from '../../components/BookForm';
 import { ChipSelect, Cover, Modal, Progress, Stars, fmtDate, useToast } from '../../components/ui';
 import { db } from '../../db';
@@ -16,14 +17,15 @@ import { ReadingTab } from './ReadingTab';
 import { SummaryTab } from './SummaryTab';
 
 const TABS = [
-  ['geral', 'Visão geral'], ['resumo', 'Resumo e resenha'], ['leitura', 'Leitura'], ['midia', 'Fotos, áudios e vídeos'], ['citacoes', 'Citações'],
-  ['notas', 'Anotações'], ['fotos', 'Páginas fotografadas'], ['glossario', 'Glossário'],
+  ['geral', 'Visão geral'], ['resumo', 'Resumo e resenha'], ['leitura', 'Leitura'], ['comentarios', 'Comentários'], ['citacoes', 'Citações'],
+  ['glossario', 'Glossário'], ['fotos', 'Fotos'],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
 export default function BookDetail() {
   const { id } = useParams();
   const book = useBook(id);
+  const allBooks = useLiveQuery(() => db.books.toArray(), []) ?? [];
   const nav = useNavigate();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -70,6 +72,7 @@ export default function BookDetail() {
         <div>
           <h1 style={{ marginBottom: 2 }}>{book.title}</h1>
           {book.subtitle && <div className="muted" style={{ marginBottom: 4 }}>{book.subtitle}</div>}
+          {book.series && <div className="small" style={{ marginBottom: 4 }}><Link to={`/grupo/serie/${encodeURIComponent(book.series)}`}>📚 {book.series}{book.seriesNumber ? ` · volume ${book.seriesNumber}` : ''}</Link></div>}
           <div style={{ fontWeight: 700 }}>
             {book.authors.map((a, i) => <span key={a}>{i > 0 && ', '}<Link to={`/autor/${encodeURIComponent(a)}`}>{a}</Link></span>)}
           </div>
@@ -131,11 +134,19 @@ export default function BookDetail() {
       )}
       {tab === 'resumo' && <SummaryTab book={book} />}
       {tab === 'leitura' && <ReadingTab book={book} sessions={sessions} readings={readings} />}
-      {tab === 'midia' && <NotesTab bookId={book.id} mode="midia" />}
-      {tab === 'notas' && <NotesTab bookId={book.id} mode="texto" />}
+      {(tab === 'comentarios' || (tab as string) === 'notas' || (tab as string) === 'midia') && <NotesTab bookId={book.id} mode="comentarios" />}
       {tab === 'citacoes' && <QuotesTab bookId={book.id} language={book.readingLanguage} />}
-      {tab === 'fotos' && <PhotosTab bookId={book.id} />}
+      {tab === 'fotos' && (
+        <div>
+          <h3>📷 Fotos do livro</h3>
+          <NotesTab bookId={book.id} mode="fotos" />
+          <h3 className="mt">📄 Páginas fotografadas (com texto pesquisável)</h3>
+          <PhotosTab bookId={book.id} />
+        </div>
+      )}
       {tab === 'glossario' && <BookGlossaryTab book={book} />}
+
+      <SeriesStrip book={book} books={allBooks} />
 
       {editing && (
         <Modal title="Editar livro" onClose={() => setEditing(false)}>

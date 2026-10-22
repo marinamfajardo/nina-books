@@ -66,7 +66,7 @@ function PhotoViewer({ photo, onClose }: { photo: PagePhoto; onClose: () => void
     if (!t) return;
     await persist();
     await db.notes.add({ id: uid(), bookId: photo.bookId, kind: 'texto', title: comment || 'Trecho fotografado', text: t, page: page ? Number(page) : undefined, createdAt: nowIso() });
-    toast('Anotação salva');
+    toast('Comentário salvo');
   };
   const rerun = async () => {
     setErr(null);
@@ -100,7 +100,7 @@ function PhotoViewer({ photo, onClose }: { photo: PagePhoto; onClose: () => void
         <p className="small muted">Se nada estiver selecionado, o texto todo é usado.</p>
         <div className="row">
           <button className="grow" onClick={asQuote}>❝ Salvar como citação</button>
-          <button className="secondary grow" onClick={asNote}>✍️ Salvar como anotação</button>
+          <button className="secondary grow" onClick={asNote}>✍️ Salvar como comentário</button>
         </div>
         <div className="row">
           <button className="ghost small" onClick={rerun} disabled={!!busy}>↻ Ler o texto de novo</button>

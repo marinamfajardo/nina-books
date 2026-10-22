@@ -7,8 +7,9 @@ import { db } from '../db';
 import { useLibrary } from '../data/hooks';
 import { GROUP_LABEL, matches, type GroupKey } from '../domain/filters';
 import { lastBackupDate } from '../services/backup';
+import { PillCard, QuoteOfDayCard } from './Inspiration';
 
-const GROUPS: GroupKey[] = ['genero', 'idioma', 'status', 'autor', 'ano', 'tag', 'formato'];
+const GROUPS: GroupKey[] = ['genero', 'serie', 'idioma', 'status', 'autor', 'ano', 'tag', 'formato'];
 
 function SearchResults({ q }: { q: string }) {
   const lib = useLibrary();
@@ -38,8 +39,8 @@ function SearchResults({ q }: { q: string }) {
         </div>
       )}
       {fn.length > 0 && (
-        <div className="card"><h3>Anotações</h3>
-          {fn.map((x) => <Link key={x.id} to={`/livro/${x.bookId}?aba=notas`} className="list-item" style={{ display: 'block' }}><b>{x.title || 'Anotação'}</b><div className="small ellipsis">{x.text}</div><div className="small muted">{title(x.bookId)}</div></Link>)}
+        <div className="card"><h3>Comentários</h3>
+          {fn.map((x) => <Link key={x.id} to={`/livro/${x.bookId}?aba=comentarios`} className="list-item" style={{ display: 'block' }}><b>{x.title || 'Comentário'}</b><div className="small ellipsis">{x.text}</div><div className="small muted">{title(x.bookId)}</div></Link>)}
         </div>
       )}
       {fp.length > 0 && (
@@ -88,10 +89,15 @@ export default function Shelf() {
         <SearchResults q={q.trim()} />
       ) : (
         <>
+          <div className="daily-cards">
+            <QuoteOfDayCard />
+            <PillCard />
+          </div>
           <div className="chips scroll" style={{ marginBottom: 10 }}>
             <span className="small muted" style={{ alignSelf: 'center', whiteSpace: 'nowrap' }}>Agrupar:</span>
             {GROUPS.map((g) => <Link key={g} to={`/grupos/${g}`} className="chip" style={{ textDecoration: 'none' }}>{GROUP_LABEL[g]}</Link>)}
             <Link to="/quero-ler" className="chip" style={{ textDecoration: 'none' }}>Fila "Quero ler"</Link>
+            <Link to="/citacoes" className="chip" style={{ textDecoration: 'none' }}>❝ Citações</Link>
           </div>
           <BookBrowser />
         </>

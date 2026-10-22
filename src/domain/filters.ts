@@ -1,10 +1,10 @@
 import type { Book, Format, Status } from '../db';
 import type { BookMeta } from '../data/hooks';
 
-export type GroupKey = 'genero' | 'idioma' | 'status' | 'autor' | 'ano' | 'tag' | 'formato';
+export type GroupKey = 'genero' | 'idioma' | 'status' | 'autor' | 'ano' | 'tag' | 'formato' | 'serie';
 
 export const GROUP_LABEL: Record<GroupKey, string> = {
-  genero: 'Gênero', idioma: 'Idioma', status: 'Status', autor: 'Autor', ano: 'Ano de leitura', tag: 'Tag', formato: 'Formato',
+  genero: 'Gênero', idioma: 'Idioma', status: 'Status', autor: 'Autor', ano: 'Ano de leitura', tag: 'Tag', formato: 'Formato', serie: 'Série / saga',
 };
 
 export interface Filters {
@@ -17,6 +17,7 @@ export interface Filters {
   genre?: string;
   tag?: string;
   author?: string;
+  series?: string;
 }
 
 export type SortKey = 'adicao' | 'titulo' | 'autor' | 'conclusao' | 'nota' | 'paginas';
@@ -33,6 +34,7 @@ export const groupValues = (b: Book, m: BookMeta | undefined, by: GroupKey): str
     case 'ano': return m?.years ?? [];
     case 'tag': return b.tags;
     case 'formato': return b.format ? [b.format] : [];
+    case 'serie': return b.series ? [b.series] : [];
   }
 };
 
@@ -46,6 +48,7 @@ export const groupToFilter = (by: GroupKey, value: string): Filters => {
     case 'ano': return { year: value };
     case 'tag': return { tag: value };
     case 'formato': return { format: value as Format };
+    case 'serie': return { series: value };
   }
 };
 
@@ -59,12 +62,22 @@ export function applyFilters(books: Book[], meta: Map<string, BookMeta>, f: Filt
     if (f.genre && !b.genres.includes(f.genre)) return false;
     if (f.tag && !b.tags.includes(f.tag)) return false;
     if (f.author && !b.authors.includes(f.author)) return false;
+    if (f.series && b.series !== f.series) return false;
     if (f.year && !meta.get(b.id)?.years.includes(f.year)) return false;
     return true;
   });
 }
 
 const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+
+/** Livros da mesma série, em ordem de volume. */
+export function seriesBooks(books: Book[], series?: string) {
+  if (!series) return [];
+  const key = normalize(series).trim();
+  return books
+    .filter((b) => b.series && normalize(b.series).trim() === key)
+    .sort((a, b) => (a.seriesNumber ?? 999) - (b.seriesNumber ?? 999) || a.title.localeCompare(b.title, 'pt-BR'));
+}
 
 export function sortBooks(books: Book[], meta: Map<string, BookMeta>, key: SortKey, desc: boolean) {
   const dir = desc ? -1 : 1;

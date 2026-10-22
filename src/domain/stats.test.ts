@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Book, Reading, Session } from '../db';
 import {
-  averagePagesPerDay, closingSession, currentPage, finishedByPeriod, goalProgress, isoWeekKey,
+  averagePagesPerDay, closingSession, currentPage, finishedByPeriod, goalProgress, isoWeekKey, pagesByDay, timeByGenre,
   pagesPerHour, progressPercent, ratingDistribution, sessionPages, sessionWords, streaks, totals,
   totalsByGroup, totalsByPeriod, wordsPerPage,
 } from './stats';
@@ -151,5 +151,37 @@ describe('notas', () => {
     expect(d.find((x) => x.rating === 4.5)?.count).toBe(2);
     expect(d.find((x) => x.rating === 2)?.count).toBe(1);
     expect(d.reduce((s, x) => s + x.count, 0)).toBe(3);
+  });
+});
+
+describe('calendário e tempo por gênero', () => {
+  const b1 = book({ id: 'f', genres: ['Fantasia'] });
+  const b2 = book({ id: 'p', genres: ['Policial', 'Suspense'] });
+  const books = new Map([['f', b1], ['p', b2]]);
+  const ss = [
+    session({ bookId: 'f', date: '2026-04-01', startPage: 0, endPage: 30, durationSec: 3600 }),
+    session({ bookId: 'f', date: '2026-04-01', startPage: 30, endPage: 40 }),
+    session({ bookId: 'p', date: '2026-04-03', startPage: 0, endPage: 60, durationSec: 3600 }),
+  ];
+  it('soma as páginas de cada dia', () => {
+    const m = pagesByDay(ss);
+    expect(m.get('2026-04-01')).toBe(40);
+    expect(m.get('2026-04-03')).toBe(60);
+  });
+  it('tempo registrado e estimado por gênero', () => {
+    // ritmo geral: 90 páginas em 2 h = 45 p/h → 80 s por página
+    const g = timeByGenre(ss, books);
+    const fan = g.find((x) => x.key === 'Fantasia')!;
+    expect(fan.recordedSec).toBe(3600);
+    expect(fan.estimatedSec).toBe(3600 + 10 * 80);
+    expect(fan.pagesPerHour).toBe(30);
+    const pol = g.find((x) => x.key === 'Policial')!;
+    expect(pol.pagesPerHour).toBe(60);
+    expect(g.find((x) => x.key === 'Suspense')?.recordedSec).toBe(3600);
+  });
+  it('sem cronômetro usa 90 s por página', () => {
+    const g = timeByGenre([session({ bookId: 'f', startPage: 0, endPage: 10 })], books);
+    expect(g[0].estimatedSec).toBe(900);
+    expect(g[0].recordedSec).toBe(0);
   });
 });

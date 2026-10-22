@@ -3,12 +3,13 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { PageTitle, Progress } from '../components/ui';
-import { db } from '../db';
+import { ReadingCalendar } from '../components/ReadingCalendar';
+import { db, type Book, type Session } from '../db';
 import { useLibrary } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL } from '../domain/constants';
 import {
   averagePagesPerDay, countBy, filterByRange, finishedByPeriod, formatDuration, formatNumber, goalProgress, pagesPerHour,
-  ratingDistribution, streaks, today, totals, totalsByGroup, totalsByPeriod, type GroupBy, type Period,
+  ratingDistribution, streaks, timeByGenre, today, totals, totalsByGroup, totalsByPeriod, type GroupBy, type Period,
 } from '../domain/stats';
 
 const PALETTE = ['#6d1a36', '#b3263e', '#d98897', '#8e2443', '#e8a3b1', '#4a0e23', '#c7354f', '#f2c4ce', '#a0455c', '#7d2a3f'];
@@ -105,6 +106,8 @@ export default function Stats() {
       <div className="grid2" style={{ marginBottom: 14 }}>
         <Link to="/ranking" className="group-tile"><b>🏆 Meu ranking</b><span className="muted">›</span></Link>
         <Link to="/autores" className="group-tile"><b>✍️ Autores</b><span className="muted">›</span></Link>
+        <Link to={`/retrospectiva/${goalYear}`} className="group-tile"><b>📖 Retrospectiva {goalYear}</b><span className="muted">›</span></Link>
+        <Link to="/conquistas" className="group-tile"><b>🏅 Conquistas</b><span className="muted">›</span></Link>
       </div>
 
       <div className="kpis">
@@ -117,6 +120,8 @@ export default function Stats() {
         <div className="kpi"><div className="v">{t.seconds ? formatDuration(t.seconds) : '—'}</div><div className="l">tempo cronometrado</div></div>
         <div className="kpi"><div className="v">{t.sessions}</div><div className="l">sessões de leitura</div></div>
       </div>
+
+      <ReadingCalendar year={goalYear} sessions={lib.sessions} books={lib.bookMap} />
 
       <div className="card">
         <div className="row between">
@@ -169,6 +174,8 @@ export default function Stats() {
         ) : <p className="small muted">Sem dados.</p>}
         {by === 'genero' && <p className="small muted">Livros com mais de um gênero contam em cada um deles.</p>}
       </div>
+
+      <GenreAnalysis sessions={sessions} books={lib.bookMap} readBooks={readBooks} />
 
       <div className="card">
         <h3>Livros concluídos por {year === 'todos' ? 'ano' : 'mês'}</h3>
@@ -229,6 +236,60 @@ export default function Stats() {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Gêneros mais lidos e quanto tempo você passa em cada um. */
+function GenreAnalysis({ sessions, books, readBooks }: { sessions: Session[]; books: Map<string, Book>; readBooks: Book[] }) {
+  const rows = timeByGenre(sessions, books).filter((g) => g.key !== 'Sem gênero');
+  const counts = new Map(countBy(readBooks, 'genero').map((g) => [g.key, g.count]));
+  if (!rows.length) return null;
+  const top = rows[0];
+  const fastest = [...rows].filter((r) => r.pagesPerHour > 0).sort((a, b) => b.pagesPerHour - a.pagesPerHour)[0];
+  const slowest = [...rows].filter((r) => r.pagesPerHour > 0).sort((a, b) => a.pagesPerHour - b.pagesPerHour)[0];
+  const mostBooks = [...counts].sort((a, b) => b[1] - a[1])[0];
+  const total = rows.reduce((a, r) => a + r.estimatedSec, 0);
+  const anyEstimate = rows.some((r) => r.estimatedSec > r.recordedSec);
+  const data = rows.slice(0, 8).map((r) => ({ label: r.key, horas: Math.round((r.estimatedSec / 3600) * 10) / 10 }));
+
+  return (
+    <div className="card">
+      <h3>🎭 Seus gêneros: livros e tempo de leitura</h3>
+      <div className="stack small">
+        {mostBooks && <p style={{ margin: 0 }}>📚 Gênero com mais livros lidos: <b>{mostBooks[0]}</b> ({mostBooks[1]} livro{mostBooks[1] > 1 ? 's' : ''}).</p>}
+        <p style={{ margin: 0 }}>⏳ Onde você passa mais tempo: <b>{top.key}</b> — cerca de <b>{formatDuration(top.estimatedSec)}</b> ({Math.round((top.estimatedSec / total) * 100)}% do seu tempo de leitura).</p>
+        {fastest && slowest && fastest.key !== slowest.key && (
+          <p style={{ margin: 0 }}>⚡ Você lê mais rápido <b>{fastest.key}</b> ({Math.round(fastest.pagesPerHour)} p/h) e mais devagar <b>{slowest.key}</b> ({Math.round(slowest.pagesPerHour)} p/h).</p>
+        )}
+      </div>
+      <div style={{ width: '100%', height: Math.max(160, data.length * 34) }} className="mt">
+        <ResponsiveContainer>
+          <BarChart data={data} layout="vertical" margin={{ left: 8 }}>
+            <XAxis type="number" hide />
+            <YAxis type="category" dataKey="label" width={110} tickLine={false} axisLine={false} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${String(v).replace('.', ',')} h`, 'tempo']} cursor={{ fill: 'var(--surface-2)' }} />
+            <Bar dataKey="horas" radius={[0, 6, 6, 0]}>
+              {data.map((_, i) => <Cell key={i} fill={PALETTE[i % PALETTE.length]} />)}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <table className="small" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead><tr className="muted" style={{ textAlign: 'left' }}><th>Gênero</th><th>Livros</th><th>Páginas</th><th>Tempo</th><th>Ritmo</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.key} style={{ borderTop: '1px solid var(--border)' }}>
+              <td style={{ padding: '4px 0' }}>{r.key}</td>
+              <td>{counts.get(r.key) ?? 0}</td>
+              <td>{formatNumber(r.pages)}</td>
+              <td>{formatDuration(r.estimatedSec)}{r.estimatedSec > r.recordedSec ? '*' : ''}</td>
+              <td>{r.pagesPerHour ? `${Math.round(r.pagesPerHour)} p/h` : '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {anyEstimate && <p className="small muted">* inclui estimativa para sessões sem cronômetro, usando o seu ritmo médio. Use o cronômetro na aba Leitura para medir o tempo real.</p>}
     </div>
   );
 }

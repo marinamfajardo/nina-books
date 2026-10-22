@@ -8,6 +8,7 @@ import { useLibrary } from '../data/hooks';
 import { formatNumber, goalProgress, today } from '../domain/stats';
 import { downloadCover, searchBooks } from '../services/bookLookup';
 import { saveMedia } from '../data/actions';
+import { redeemVoucher } from './Achievements';
 
 // ---------- Metas ----------
 export function Goals() {
@@ -187,7 +188,8 @@ export function Wishlist() {
     }
     const id = await createBook({ title: w.title, authors: w.author ? w.author.split(',').map((s) => s.trim()) : [], isbn: w.isbn, coverUrl: w.coverUrl, coverId, ownership: 'proprio', status: 'quero_ler' });
     await db.wishlist.delete(w.id);
-    toast('Livro na estante! 📚');
+    const used = await redeemVoucher(w.title);
+    toast(used ? 'Vale-livro usado! Livro na estante 📚🎟️' : 'Livro na estante! 📚');
     nav(`/livro/${id}`);
   };
 

@@ -1,0 +1,25 @@
+name: Notificações diárias
+
+on:
+  schedule:
+    - cron: '0 12 * * *' # 9h em Brasília: citação ou palavra do dia
+    - cron: '0 0 * * *'  # 21h em Brasília: "Saia do celular e vá ler"
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: 'manha ou noite'
+        default: 'noite'
+
+jobs:
+  enviar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save web-push@3
+      - run: node scripts/send-push.mjs
+        env:
+          NINA_PUSH: ${{ secrets.NINA_PUSH }}
+          TIPO: ${{ github.event.inputs.tipo || (github.event.schedule == '0 12 * * *' && 'manha' || 'noite') }}

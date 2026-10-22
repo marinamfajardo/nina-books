@@ -245,3 +245,50 @@ export const formatDuration = (sec: number) => {
   if (m) return `${m}min`;
   return `${Math.round(sec)}s`;
 };
+
+// ---------- Calendário e tempo por gênero ----------
+
+/** Páginas lidas em cada dia (AAAA-MM-DD → páginas). */
+export const pagesByDay = (sessions: Session[]) => {
+  const m = new Map<string, number>();
+  for (const s of sessions) m.set(s.date, (m.get(s.date) ?? 0) + sessionPages(s));
+  return m;
+};
+
+/** Segundos por página no seu ritmo (sessões cronometradas); 90 s se ainda não houver dados. */
+export const secondsPerPage = (sessions: Session[]) => {
+  const pph = pagesPerHour(sessions);
+  return pph > 0 ? 3600 / pph : 90;
+};
+
+export interface GenreTime { key: string; pages: number; recordedSec: number; estimatedSec: number; pagesPerHour: number; books: number }
+
+/**
+ * Tempo de leitura por gênero. `recordedSec` soma só o cronometrado;
+ * `estimatedSec` completa as sessões sem cronômetro usando o seu ritmo médio.
+ */
+export function timeByGenre(sessions: Session[], books: Map<string, Book>): GenreTime[] {
+  const spp = secondsPerPage(sessions);
+  const map = new Map<string, GenreTime & { timedPages: number; ids: Set<string> }>();
+  for (const s of sessions) {
+    const b = books.get(s.bookId);
+    if (!b) continue;
+    for (const g of bookGroupValues(b, 'genero')) {
+      if (!map.has(g)) map.set(g, { key: g, pages: 0, recordedSec: 0, estimatedSec: 0, pagesPerHour: 0, books: 0, timedPages: 0, ids: new Set() });
+      const t = map.get(g)!;
+      const p = sessionPages(s);
+      t.pages += p;
+      t.ids.add(b.id);
+      if (s.durationSec) {
+        t.recordedSec += s.durationSec;
+        t.estimatedSec += s.durationSec;
+        t.timedPages += p;
+      } else {
+        t.estimatedSec += p * spp;
+      }
+    }
+  }
+  return [...map.values()]
+    .map(({ timedPages, ids, ...t }) => ({ ...t, books: ids.size, pagesPerHour: t.recordedSec ? timedPages / (t.recordedSec / 3600) : 0 }))
+    .sort((a, b) => b.estimatedSec - a.estimatedSec);
+}

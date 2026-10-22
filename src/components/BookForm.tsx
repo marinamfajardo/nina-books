@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { Book, Format, Ownership, Status } from '../db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db, type Book, type Format, type Ownership, type Status } from '../db';
 import { ensureListItems } from '../data/actions';
 import { useList } from '../data/hooks';
 import { DEFAULT_WORDS_PER_PAGE, FORMAT_LABEL, OWNERSHIP_LABEL, STATUS_LABEL, STATUSES } from '../domain/constants';
@@ -32,6 +33,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
         summaryAI: r.summary, summaryAISources: r.sources, summaryAIDate: new Date().toISOString(),
         publisher: d.publisher ?? r.publisher, year: d.year ?? r.year, pageCount: d.pageCount ?? r.pageCount,
         originalLanguage: d.originalLanguage ?? r.originalLanguage, synopsis: d.synopsis ?? r.synopsis,
+        series: d.series ?? r.series, seriesNumber: d.seriesNumber ?? r.seriesNumber,
       });
     } catch (e) {
       setErr((e as Error).message);
@@ -58,7 +60,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
           {noWeb && <p className="small muted" style={{ margin: '6px 0 0' }}>⚠️ Desta vez a IA não conseguiu pesquisar na internet e escreveu com o que já sabe. Confira as informações.</p>}
           <textarea className="mt" rows={10} style={{ minHeight: 220 }} value={d.summaryAI} onChange={(e) => set({ summaryAI: e.target.value })} />
           {d.summaryAISources?.length ? <p className="small muted">Fontes: {d.summaryAISources.map((s) => s.title).slice(0, 3).join(' · ')}</p> : null}
-          <p className="small muted">A IA também completou editora, ano e páginas quando encontrou. Confira abaixo.</p>
+          <p className="small muted">A IA também completou editora, ano, páginas e série quando encontrou. Confira abaixo.</p>
         </div>
       )}
       {mode === 'manual' && (
@@ -77,6 +79,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(() => (initial.coverBlob ? URL.createObjectURL(initial.coverBlob) : undefined));
   const [saving, setSaving] = useState(false);
   const genres = useList('genre');
+  const seriesNames = [...new Set((useLiveQuery(() => db.books.toArray(), []) ?? []).map((b) => b.series).filter(Boolean) as string[])].sort();
   const languages = useList('language');
   const tags = useList('tag');
   const set = (p: Partial<BookDraft>) => setD((x) => ({ ...x, ...p }));
@@ -113,6 +116,15 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
         </div>
       </div>
       <label className="field"><span>Autor(es) — separe por vírgula</span><input value={authors} onChange={(e) => setAuthors(e.target.value)} /></label>
+      <div className="grid2" style={{ gridTemplateColumns: '2fr 1fr' }}>
+        <label className="field"><span>Série ou saga (opcional)</span>
+          <input list="series-list" placeholder="Ex.: Harry Potter" value={d.series ?? ''} onChange={(e) => set({ series: e.target.value || undefined })} />
+        </label>
+        <label className="field"><span>Volume nº</span>
+          <input inputMode="decimal" placeholder="1" value={d.seriesNumber ?? ''} onChange={(e) => set({ seriesNumber: Number(e.target.value.replace(',', '.')) || undefined })} />
+        </label>
+      </div>
+      <datalist id="series-list">{seriesNames.map((n) => <option key={n} value={n} />)}</datalist>
       {withSummary && <SummaryChooser d={d} set={set} authors={authors.split(',').map((a) => a.trim()).filter(Boolean)} />}
       <div className="grid2">
         <label className="field"><span>Editora</span><input value={d.publisher ?? ''} onChange={(e) => set({ publisher: e.target.value || undefined })} /></label>

@@ -8,6 +8,7 @@ import AISettings from './AISettings';
 import { getOcrEngine, setOcrEngine, type OcrEngine } from '../services/ocr';
 import { applyTheme, getTheme, type Theme } from '../theme';
 import SyncSettings from './SyncSettings';
+import NotificationSettings from './NotificationSettings';
 
 function ListManager({ kind, title }: { kind: ListKind; title: string }) {
   const items = useList(kind);
@@ -41,10 +42,15 @@ export default function Settings() {
       <PageTitle>Configurações</PageTitle>
 
       <SyncSettings />
+      <NotificationSettings />
 
       <div className="card">
         <h3>Mais recursos</h3>
         <div className="group-grid">
+          <Link to="/conquistas" className="group-tile"><b>🏅 Conquistas</b></Link>
+          <Link to="/citacoes" className="group-tile"><b>❝ Citações</b></Link>
+          <Link to="/inspiracao" className="group-tile"><b>🧠 Inspiração</b></Link>
+          <Link to="/retrospectiva" className="group-tile"><b>📖 Retrospectiva</b></Link>
           <Link to="/ranking" className="group-tile"><b>🏆 Ranking</b></Link>
           <Link to="/autores" className="group-tile"><b>✍️ Autores</b></Link>
           <Link to="/metas" className="group-tile"><b>🎯 Metas</b></Link>
