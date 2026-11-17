@@ -200,3 +200,10 @@ export async function importBooks(rows: { book: NewBook & { title: string }; sta
   }
   return { added, skipped };
 }
+
+/** Troca o arquivo de uma foto já salva: grava o novo e apaga o antigo (novo id, para sincronizar certo). */
+export async function replaceMedia(oldId: string | undefined, blob: Blob, name?: string) {
+  const id = await saveMedia(blob, name);
+  if (oldId) await db.media.delete(oldId);
+  return id;
+}

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PageTitle } from '../components/ui';
 import type { ListKind } from '../db';
-import { ensureListItems, renameListItem } from '../data/actions';
 import { useList } from '../data/hooks';
+import { ListEditor } from '../components/ListEditor';
 import AISettings from './AISettings';
 import { getOcrEngine, setOcrEngine, type OcrEngine } from '../services/ocr';
 import { applyTheme, getTheme, type Theme } from '../theme';
@@ -12,24 +12,14 @@ import NotificationSettings from './NotificationSettings';
 
 function ListManager({ kind, title }: { kind: ListKind; title: string }) {
   const items = useList(kind);
-  const [name, setName] = useState('');
+  const [open, setOpen] = useState(false);
   return (
-    <details className="card">
-      <summary style={{ cursor: 'pointer', fontWeight: 700 }}>{title} ({items.length})</summary>
-      <form className="row nowrap mt" onSubmit={async (e) => { e.preventDefault(); if (name.trim()) { await ensureListItems(kind, [name]); setName(''); } }}>
-        <input placeholder="Adicionar…" value={name} onChange={(e) => setName(e.target.value)} />
-        <button type="submit" className="secondary">+</button>
-      </form>
-      <div className="mt">
-        {items.map((i) => (
-          <div key={i} className="row between nowrap" style={{ padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
-            <span className="grow">{i}</span>
-            <button className="icon small" onClick={async () => { const n = prompt('Novo nome:', i)?.trim(); if (n && n !== i) await renameListItem(kind, i, n); }}>✎</button>
-            <button className="icon small" onClick={async () => { if (confirm(`Remover “${i}”? Ele sai também dos livros.`)) await renameListItem(kind, i, null); }}>✕</button>
-          </div>
-        ))}
-      </div>
-    </details>
+    <>
+      <button className="card group-tile" style={{ width: '100%', color: 'inherit', fontWeight: 400 }} onClick={() => setOpen(true)}>
+        <b>{title}</b><span className="muted">{items.length} ✎</span>
+      </button>
+      {open && <ListEditor kind={kind} title={title} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 

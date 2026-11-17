@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { Book } from '../db';
 import { useMediaUrl } from '../services/media';
@@ -166,8 +167,10 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
-  return (
-    <div className="modal-bg" onClick={onClose}>
+  // abre por cima da página (fora de qualquer formulário) e não deixa o envio de um formulário
+  // de dentro da janela chegar ao formulário de fora
+  return createPortal(
+    <div className="modal-bg" onClick={onClose} onSubmit={(e) => e.stopPropagation()}>
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={title}>
         <div className="row between nowrap" style={{ marginBottom: 10 }}>
           <h2 style={{ margin: 0 }}>{title}</h2>
@@ -175,7 +178,8 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

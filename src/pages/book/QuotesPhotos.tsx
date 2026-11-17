@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { DictateButton } from '../../components/Dictation';
 import { CaptureButton, ErrorBox, fmtDate, Modal, useToast } from '../../components/ui';
 import { db, nowIso, uid, type PagePhoto, type Quote } from '../../db';
-import { saveMedia } from '../../data/actions';
+import { replaceMedia, saveMedia } from '../../data/actions';
 import { shrinkImage, useMediaUrl } from '../../services/media';
 import { extractText } from '../../services/ocr';
 
@@ -104,6 +104,13 @@ function PhotoViewer({ photo, onClose }: { photo: PagePhoto; onClose: () => void
         </div>
         <div className="row">
           <button className="ghost small" onClick={rerun} disabled={!!busy}>↻ Ler o texto de novo</button>
+          <CaptureButton accept="image/*" capture={false} className="ghost small" onFile={async (f) => {
+            const mediaId = await replaceMedia(photo.mediaId, await shrinkImage(f, 2000, 0.85), 'pagina');
+            await db.photos.update(photo.id, { mediaId });
+            photo.mediaId = mediaId;
+            toast('Foto trocada 🖼️ — toque em “Ler o texto de novo” se quiser atualizar o texto');
+            onClose();
+          }}>🖼️ Trocar pela galeria</CaptureButton>
           <button className="ghost small" style={{ color: 'var(--danger)' }} onClick={async () => {
             if (!confirm('Apagar esta foto?')) return;
             await db.media.delete(photo.mediaId);
@@ -125,12 +132,20 @@ export function PhotosTab({ bookId }: { bookId: string }) {
 
   return (
     <div>
-      <CaptureButton accept="image/*" className="block" onFile={async (f) => {
-        setErr(null);
-        const { photo, error } = await capturePagePhoto(bookId, f, setBusy);
-        setErr(error);
-        setOpen(photo);
-      }}>📷 Fotografar página ou anotação</CaptureButton>
+      <div className="grid2">
+        <CaptureButton accept="image/*" className="" onFile={async (f) => {
+          setErr(null);
+          const { photo, error } = await capturePagePhoto(bookId, f, setBusy);
+          setErr(error);
+          setOpen(photo);
+        }}>📷 Fotografar página</CaptureButton>
+        <CaptureButton accept="image/*" capture={false} className="secondary" onFile={async (f) => {
+          setErr(null);
+          const { photo, error } = await capturePagePhoto(bookId, f, setBusy);
+          setErr(error);
+          setOpen(photo);
+        }}>🖼️ Da galeria</CaptureButton>
+      </div>
       <p className="small muted">O texto da foto vira pesquisável. Funciona com trechos impressos e anotações à mão.</p>
       <ErrorBox error={err} />
       {busy && <div className="alert info small">⏳ {busy}</div>}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, type Book, type Format, type Ownership, type Status } from '../db';
+import { db, type Book, type Format, type ListKind, type Ownership, type Status } from '../db';
 import { ensureListItems } from '../data/actions';
 import { useList } from '../data/hooks';
 import { DEFAULT_WORDS_PER_PAGE, FORMAT_LABEL, OWNERSHIP_LABEL, STATUS_LABEL, STATUSES } from '../domain/constants';
@@ -8,6 +8,7 @@ import { hasApiKey, researchBook } from '../services/claude';
 import { shrinkImage } from '../services/media';
 import { CoverStep } from './CoverCropper';
 import { FeelingPicker } from './FeelingPicker';
+import { ListEditor } from './ListEditor';
 import { COUNTRY_OPTIONS, toCountryCode } from '../domain/countries';
 import { CaptureButton, ChipSelect, Cover, ErrorBox, Modal, MultiChips, Stars } from './ui';
 
@@ -79,6 +80,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
   initial: BookDraft; onSave: (d: BookDraft) => Promise<void> | void; onCancel?: () => void; saveLabel?: string; withSummary?: boolean;
 }) {
   const [newPhoto, setNewPhoto] = useState<Blob | null>(null);
+  const [listEdit, setListEdit] = useState<ListKind | null>(null);
   const [d, setD] = useState<BookDraft>({ status: 'quero_ler', favorite: false, rating: 0, genres: [], tags: [], ...initial });
   const [authors, setAuthors] = useState(initial.authors.join(', '));
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(() => (initial.coverBlob ? URL.createObjectURL(initial.coverBlob) : undefined));
@@ -110,11 +112,12 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           ) : (
             <Cover book={{ title: d.title || 'Sem título', authors: authors.split(','), coverId: d.coverId, coverUrl: d.coverUrl, favorite: false }} />
           )}
-          <CaptureButton
-            accept="image/*"
-            className="ghost small"
-            onFile={async (f) => setNewPhoto(await shrinkImage(f, 1600))}
-          >📷 {d.coverBlob || d.coverId || d.coverUrl ? 'Trocar' : 'Capa'}</CaptureButton>
+          <CaptureButton accept="image/*" className="ghost small" onFile={async (f) => setNewPhoto(await shrinkImage(f, 1600))}>
+            📷 {d.coverBlob || d.coverId || d.coverUrl ? 'Nova foto' : 'Capa'}
+          </CaptureButton>
+          <CaptureButton accept="image/*" capture={false} className="ghost small" onFile={async (f) => setNewPhoto(await shrinkImage(f, 1600))}>
+            🖼️ Da galeria
+          </CaptureButton>
         </div>
         <div className="grow stack">
           <label className="field"><span>Título *</span><input required value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>
@@ -177,7 +180,8 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
       <div><span className="small muted" style={{ fontWeight: 700 }}>Como o livro me fez sentir</span>
         <FeelingPicker value={d.feelings ?? []} onChange={(feelings) => set({ feelings })} />
       </div>
-      <div><span className="small muted" style={{ fontWeight: 700 }}>Gêneros (pode escolher vários)</span>
+      <div><span className="row between"><span className="small muted" style={{ fontWeight: 700 }}>Gêneros (pode escolher vários)</span>
+        <button type="button" className="ghost small" onClick={() => setListEdit('genre')}>✎ Editar lista</button></span>
         <MultiChips options={genres} value={d.genres ?? []} onChange={(g) => set({ genres: g })}
           onCreate={async (n) => { await ensureListItems('genre', [n]); set({ genres: [...(d.genres ?? []), n] }); }} createLabel="+ Novo gênero" />
       </div>
@@ -210,6 +214,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           {locations.map((l) => (
             <button key={l} type="button" className={`chip${d.location === l ? ' on' : ''}`} onClick={() => set({ location: d.location === l ? undefined : l })}>{l}</button>
           ))}
+          <button type="button" className="ghost small" onClick={() => setListEdit('location')}>✎ Editar lista</button>
         </div>
       )}
       <div className="grid2">
@@ -226,7 +231,8 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           </select>
         </label>
       </div>
-      <div><span className="small muted" style={{ fontWeight: 700 }}>Tags</span>
+      <div><span className="row between"><span className="small muted" style={{ fontWeight: 700 }}>Tags</span>
+        <button type="button" className="ghost small" onClick={() => setListEdit('tag')}>✎ Editar lista</button></span>
         <MultiChips options={tags} value={d.tags ?? []} onChange={(t) => set({ tags: t })}
           onCreate={async (n) => { await ensureListItems('tag', [n]); set({ tags: [...(d.tags ?? []), n] }); }} createLabel="+ Nova tag" />
       </div>
@@ -247,6 +253,20 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
         <p className="small muted">Se você informar o total de palavras, ele é usado no lugar da estimativa por página.</p>
       </details>
 
+      {listEdit && (
+        <ListEditor
+          kind={listEdit}
+          title={{ genre: 'Gêneros', tag: 'Tags', language: 'Idiomas', location: 'Locais' }[listEdit]}
+          onClose={() => setListEdit(null)}
+          onChange={(from, to) => setD((x) => {
+            const swap = (arr?: string[]) => [...new Set((arr ?? []).map((v) => (v === from ? to : v)).filter(Boolean) as string[])];
+            if (listEdit === 'genre') return { ...x, genres: swap(x.genres) };
+            if (listEdit === 'tag') return { ...x, tags: swap(x.tags) };
+            if (listEdit === 'location' && x.location === from) return { ...x, location: to ?? undefined };
+            return x;
+          })}
+        />
+      )}
       {newPhoto && (
         <Modal title="Recortar capa" onClose={() => setNewPhoto(null)}>
           <CoverStep

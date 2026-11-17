@@ -6,9 +6,11 @@ import { BookForm } from '../../components/BookForm';
 import { FeelingPicker } from '../../components/FeelingPicker';
 import { feelingLabel } from '../../domain/feelings';
 import { countryName } from '../../domain/countries';
-import { ChipSelect, Cover, Modal, Progress, Stars, fmtDate, useToast } from '../../components/ui';
+import { CaptureButton, ChipSelect, Cover, Modal, Progress, Stars, fmtDate, useToast } from '../../components/ui';
+import { CoverStep } from '../../components/CoverCropper';
+import { shrinkImage } from '../../services/media';
 import { db } from '../../db';
-import { changeStatus, deleteBook, updateBook } from '../../data/actions';
+import { changeStatus, deleteBook, replaceMedia, updateBook } from '../../data/actions';
 import { useBook } from '../../data/hooks';
 import { updateFromDraft } from '../../data/saveDraft';
 import { FORMAT_LABEL, OWNERSHIP_LABEL, STATUS_LABEL, STATUSES } from '../../domain/constants';
@@ -34,6 +36,7 @@ export default function BookDetail() {
   const [params, setParams] = useSearchParams();
   const tab = (params.get('aba') as Tab) || 'geral';
   const [editing, setEditing] = useState(false);
+  const [coverPhoto, setCoverPhoto] = useState<Blob | null>(null);
   const [finishing, setFinishing] = useState<'lido' | 'desisti' | null>(null);
   const [finishDate, setFinishDate] = useState(today());
   const [finishSynopsis, setFinishSynopsis] = useState('');
@@ -73,7 +76,13 @@ export default function BookDetail() {
       </div>
 
       <div className="book-hero">
-        <Cover book={book} showFav={false} />
+        <div>
+          <Cover book={book} showFav={false} />
+          <div className="row" style={{ justifyContent: 'center', gap: 0, marginTop: 4 }}>
+            <CaptureButton accept="image/*" className="ghost small" onFile={async (f) => setCoverPhoto(await shrinkImage(f, 1600))}>📷</CaptureButton>
+            <CaptureButton accept="image/*" capture={false} className="ghost small" onFile={async (f) => setCoverPhoto(await shrinkImage(f, 1600))}>🖼️ Trocar capa</CaptureButton>
+          </div>
+        </div>
         <div>
           <h1 style={{ marginBottom: 2 }}>{book.title}</h1>
           {book.subtitle && <div className="muted" style={{ marginBottom: 4 }}>{book.subtitle}</div>}
@@ -164,6 +173,21 @@ export default function BookDetail() {
       {tab === 'glossario' && <BookGlossaryTab book={book} />}
 
       <SeriesStrip book={book} books={allBooks} />
+
+      {coverPhoto && (
+        <Modal title="Nova capa" onClose={() => setCoverPhoto(null)}>
+          <CoverStep
+            photo={coverPhoto}
+            onRetake={() => setCoverPhoto(null)}
+            onDone={async (blob) => {
+              const coverId = await replaceMedia(book.coverId, blob, 'capa');
+              await updateBook(book.id, { coverId, coverUrl: undefined });
+              setCoverPhoto(null);
+              toast('Capa trocada 📚');
+            }}
+          />
+        </Modal>
+      )}
 
       {editing && (
         <Modal title="Editar livro" onClose={() => setEditing(false)}>

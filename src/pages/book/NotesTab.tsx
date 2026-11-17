@@ -6,7 +6,7 @@ import { feelingLabel } from '../../domain/feelings';
 import { useEffect, useRef, useState } from 'react';
 import { CaptureButton, ErrorBox, fmtDateTime, Modal, useToast } from '../../components/ui';
 import { db, nowIso, uid, type Note } from '../../db';
-import { saveMedia } from '../../data/actions';
+import { replaceMedia, saveMedia } from '../../data/actions';
 import { formatDuration } from '../../domain/stats';
 import { shrinkImage, useMediaUrl } from '../../services/media';
 
@@ -173,6 +173,13 @@ export function NotesTab({ bookId, mode }: { bookId?: string; mode: 'comentarios
             <div className="row between small muted">
               <span>{{ texto: '✍️', audio: '🎙️', video: '🎥', foto: '📷' }[n.kind]} {fmtDateTime(n.createdAt)}{n.page ? ` · p. ${n.page}` : ''}{n.feeling ? <span title={feelingLabel(n.feeling)} style={{ fontSize: '1.2rem', marginLeft: 6 }}>{n.feeling}</span> : null}</span>
               <span>
+                {n.kind === 'foto' && (
+                  <CaptureButton accept="image/*" capture={false} className="icon small" onFile={async (f) => {
+                    const mediaId = await replaceMedia(n.mediaId, await shrinkImage(f, 2000), n.title);
+                    await db.notes.update(n.id, { mediaId });
+                    toast('Foto trocada 🖼️');
+                  }}>🔄</CaptureButton>
+                )}
                 <button className="icon small" onClick={() => setEditing(n)} aria-label="Editar">✎</button>
                 <button className="icon small" onClick={() => remove(n)} aria-label="Apagar">✕</button>
               </span>
