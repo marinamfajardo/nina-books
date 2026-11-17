@@ -1,13 +1,15 @@
 name: Notificações diárias
 
+# O GitHub costuma atrasar tarefas agendadas, então tentamos várias vezes dentro de cada janela;
+# o script envia só uma vez por dia (controle no Supabase) e nunca fora do horário.
 on:
   schedule:
-    - cron: '0 12 * * *' # 9h em Brasília: citação ou palavra do dia
-    - cron: '0 0 * * *'  # 21h em Brasília: "Saia do celular e vá ler"
+    - cron: '7,27,47 12,13 * * *' # 9h–10h59 em Brasília: citação ou palavra do dia
+    - cron: '7,27,47 0,1 * * *'   # 21h–22h59 em Brasília: "Saia do celular e vá ler"
   workflow_dispatch:
     inputs:
       tipo:
-        description: 'manha ou noite'
+        description: 'manha ou noite (envio de teste, ignora o horário)'
         default: 'noite'
 
 jobs:
@@ -22,4 +24,4 @@ jobs:
       - run: node scripts/send-push.mjs
         env:
           NINA_PUSH: ${{ secrets.NINA_PUSH }}
-          TIPO: ${{ github.event.inputs.tipo || (github.event.schedule == '0 12 * * *' && 'manha' || 'noite') }}
+          TIPO: ${{ github.event.inputs.tipo }}

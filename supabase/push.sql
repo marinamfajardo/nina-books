@@ -19,3 +19,21 @@ as $$
 $$;
 revoke all on function public.nina_push_targets(text) from public;
 grant execute on function public.nina_push_targets(text) to anon, authenticated;
+
+-- cada aviso sai no máximo uma vez por dia (o GitHub tenta várias vezes dentro da janela de horário)
+create table if not exists public.push_sent (kind text not null, day date not null, sent_at timestamptz not null default now(), primary key (kind, day));
+alter table public.push_sent enable row level security; -- sem políticas: ninguém lê pela API
+
+create or replace function public.nina_push_claim(secret text, kind text, day date)
+returns boolean
+language plpgsql security definer set search_path = public, extensions
+as $$
+begin
+  if not exists (select 1 from public.push_config c where c.secret_hash = encode(extensions.digest(secret, 'sha256'), 'hex')) then
+    return false;
+  end if;
+  insert into public.push_sent (kind, day) values (kind, day) on conflict do nothing;
+  return found;
+end $$;
+revoke all on function public.nina_push_claim(text, text, date) from public;
+grant execute on function public.nina_push_claim(text, text, date) to anon, authenticated;
