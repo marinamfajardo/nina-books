@@ -79,7 +79,7 @@ export default function Inspiration() {
 }
 
 /** Todas as citações, de todos os livros, num lugar só. */
-export function AllQuotes() {
+export function AllQuotes({ embedded = false }: { embedded?: boolean }) {
   const lib = useLibrary();
   const toast = useToast();
   const quotes = useLiveQuery(() => db.quotes.toArray(), []) ?? [];
@@ -94,7 +94,12 @@ export function AllQuotes() {
 
   return (
     <div>
-      <PageTitle back right={<button onClick={() => setEdit({})} disabled={!books.length}>+ Citação</button>}>Minhas citações</PageTitle>
+      {embedded ? (
+        <button className="block" style={{ marginBottom: 12 }} onClick={() => setEdit({})} disabled={!books.length}>❝ Nova citação (escrever ou falar)</button>
+      ) : (
+        <PageTitle back right={<button onClick={() => setEdit({})} disabled={!books.length}>+ Citação</button>}>Minhas citações</PageTitle>
+      )}
+      {!books.length && <p className="small muted">Cadastre um livro primeiro para guardar citações dele.</p>}
       <QuoteOfDayCard />
       <input type="search" placeholder="Buscar citação, comentário ou livro" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} />
       {!quotes.length && <div className="empty"><div className="big">❝</div>Anote aqui as frases que marcaram você. Todo dia uma delas volta como lembrete.</div>}

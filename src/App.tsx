@@ -14,6 +14,7 @@ import Stats from './pages/Stats';
 import Achievements, { MedalCelebration } from './pages/Achievements';
 import Retrospective from './pages/Retrospective';
 import Inspiration, { AllQuotes } from './pages/Inspiration';
+import Notes from './pages/Notes';
 import Ranking, { AuthorList, AuthorPage } from './pages/Ranking';
 import { SyncStatusBadge } from './pages/SyncSettings';
 import { useAutoSync } from './sync/useSync';
@@ -55,6 +56,7 @@ function Shell() {
           <Route path="/retrospectiva" element={<Retrospective />} />
           <Route path="/inspiracao" element={<Inspiration />} />
           <Route path="/citacoes" element={<AllQuotes />} />
+          <Route path="/notas" element={<Notes />} />
           <Route path="/retrospectiva/:year" element={<Retrospective />} />
           <Route path="/autores" element={<AuthorList />} />
           <Route path="/autor/:name" element={<AuthorPage />} />
@@ -64,6 +66,7 @@ function Shell() {
       <nav className="bottomnav" aria-label="Navegação principal">
         <NavLink to="/" end>{Icon.shelf()}Estante</NavLink>
         <NavLink to="/adicionar" className={({ isActive }) => `add${isActive ? ' active' : ''}`}><span className="bubble">{Icon.add()}</span>Adicionar</NavLink>
+        <NavLink to="/notas">{Icon.notes()}Notas</NavLink>
         <NavLink to="/estatisticas">{Icon.stats()}Estatísticas</NavLink>
         <NavLink to="/glossario">{Icon.glossary()}Glossário</NavLink>
         <NavLink to="/configuracoes">{Icon.settings()}Ajustes</NavLink>

@@ -1,4 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
+import { Link } from 'react-router-dom';
+import { useLibrary } from '../../data/hooks';
 import { useEffect, useRef, useState } from 'react';
 import { CaptureButton, ErrorBox, fmtDateTime, Modal, useToast } from '../../components/ui';
 import { db, nowIso, uid, type Note } from '../../db';
@@ -76,12 +78,23 @@ function MediaPlayer({ note }: { note: Note }) {
     : <video controls playsInline src={url} style={{ width: '100%', borderRadius: 12, maxHeight: 420, background: '#000' }} />;
 }
 
-type Draft = { kind: Note['kind']; title: string; text: string; page: string; blob?: Blob; seconds?: number };
+type Draft = { kind: Note['kind']; title: string; text: string; page: string; blob?: Blob; seconds?: number; bookId?: string };
 
-/** mode "comentarios": comentários escritos, em áudio ou em vídeo · mode "fotos": fotos do livro */
-export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios' | 'fotos' }) {
-  const all = useLiveQuery(() => db.notes.where('bookId').equals(bookId).reverse().sortBy('createdAt'), [bookId]) ?? [];
-  const notes = all.filter((n) => (mode === 'fotos' ? n.kind === 'foto' : n.kind !== 'foto'));
+const LAST_BOOK = 'nina.notes.lastBook';
+
+/**
+ * mode "comentarios": comentários escritos, em áudio ou em vídeo · mode "fotos": fotos do livro.
+ * Sem `bookId` (aba Notas), mostra os de todos os livros e pede para escolher o livro ao adicionar.
+ */
+export function NotesTab({ bookId, mode }: { bookId?: string; mode: 'comentarios' | 'fotos' }) {
+  const all = useLiveQuery(
+    () => (bookId ? db.notes.where('bookId').equals(bookId) : db.notes.toCollection()).reverse().sortBy('createdAt'),
+    [bookId],
+  ) ?? [];
+  const lib = useLibrary();
+  const [filterBook, setFilterBook] = useState('');
+  const notes = all.filter((n) => (mode === 'fotos' ? n.kind === 'foto' : n.kind !== 'foto') && (!filterBook || n.bookId === filterBook));
+  const books = [...lib.books].sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState<Note | null>(null);
   const toast = useToast();
@@ -90,9 +103,12 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios'
     if (!draft) return;
     if (draft.kind === 'texto' && !draft.text.trim()) return;
     if (draft.kind !== 'texto' && !draft.blob) return;
+    const target = bookId ?? draft.bookId;
+    if (!target) return;
+    if (!bookId) localStorage.setItem(LAST_BOOK, target);
     const mediaId = draft.blob ? await saveMedia(draft.blob, draft.title) : undefined;
     await db.notes.add({
-      id: uid(), bookId, kind: draft.kind, title: draft.title.trim() || undefined, text: draft.text.trim() || undefined,
+      id: uid(), bookId: target, kind: draft.kind, title: draft.title.trim() || undefined, text: draft.text.trim() || undefined,
       mediaId, page: draft.page ? Number(draft.page) : undefined, createdAt: nowIso(),
     });
     setDraft(null);
@@ -105,7 +121,11 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios'
     await db.notes.delete(n.id);
   };
 
-  const blank = (kind: Note['kind']): Draft => ({ kind, title: '', text: '', page: '' });
+  const lastBook = localStorage.getItem(LAST_BOOK) ?? undefined;
+  const blank = (kind: Note['kind']): Draft => ({
+    kind, title: '', text: '', page: '',
+    bookId: bookId ?? (filterBook || (lastBook && lib.bookMap.has(lastBook) ? lastBook : undefined)),
+  });
 
   return (
     <div>
@@ -121,7 +141,13 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios'
               ou enviar um áudio/vídeo já gravado
             </CaptureButton>
           </div>
-          <p className="small muted center" style={{ margin: 0 }}>Seus comentários sobre o livro — separados das citações.</p>
+          <p className="small muted center" style={{ margin: 0 }}>{bookId ? 'Seus comentários sobre o livro — separados das citações.' : 'Cada comentário fica guardado também na página do livro escolhido.'}</p>
+          {!bookId && books.length > 0 && (
+            <select className="mt" value={filterBook} onChange={(e) => setFilterBook(e.target.value)}>
+              <option value="">Todos os livros</option>
+              {books.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
+            </select>
+          )}
         </div>
       ) : (
         <div style={{ marginBottom: 14 }}>
@@ -149,7 +175,8 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios'
                 <button className="icon small" onClick={() => remove(n)} aria-label="Apagar">✕</button>
               </span>
             </div>
-            {n.title && <b>{n.title}</b>}
+            {!bookId && <Link to={`/livro/${n.bookId}?aba=comentarios`} className="small" style={{ fontWeight: 700 }}>📖 {lib.bookMap.get(n.bookId)?.title ?? 'livro'}</Link>}
+            {n.title && <div><b>{n.title}</b></div>}
             {n.text && <p className="pre" style={{ marginTop: 4 }}>{n.text}</p>}
             {n.mediaId && <MediaPlayer note={n} />}
           </div>
@@ -159,6 +186,14 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios'
       {draft && (
         <Modal title={{ texto: 'Novo comentário', audio: 'Comentário em áudio', video: 'Comentário em vídeo', foto: 'Foto' }[draft.kind]} onClose={() => setDraft(null)}>
           <div className="stack">
+            {!bookId && (
+              <label className="field"><span>Livro *</span>
+                <select value={draft.bookId ?? ''} onChange={(e) => setDraft({ ...draft, bookId: e.target.value || undefined })}>
+                  <option value="">Escolha o livro…</option>
+                  {books.map((b) => <option key={b.id} value={b.id}>{b.title}</option>)}
+                </select>
+              </label>
+            )}
             {draft.kind === 'audio' && !draft.blob && <AudioRecorder onDone={(blob, seconds) => setDraft((d) => d && { ...d, blob, seconds })} />}
             {draft.blob && draft.kind === 'audio' && <audio controls src={URL.createObjectURL(draft.blob)} style={{ width: '100%' }} />}
             {draft.blob && draft.kind === 'foto' && <img src={URL.createObjectURL(draft.blob)} alt="Prévia" style={{ width: '100%', borderRadius: 12, maxHeight: 360, objectFit: 'contain' }} />}
@@ -167,7 +202,7 @@ export function NotesTab({ bookId, mode }: { bookId: string; mode: 'comentarios'
             {draft.kind === 'texto' && <label className="field"><span>Comentário</span><textarea autoFocus value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>}
             {draft.kind !== 'texto' && <label className="field"><span>Descrição (opcional)</span><input value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>}
             <label className="field"><span>Página (opcional)</span><input inputMode="numeric" value={draft.page} onChange={(e) => setDraft({ ...draft, page: e.target.value.replace(/\D/g, '') })} /></label>
-            <button className="block" onClick={save} disabled={draft.kind === 'texto' ? !draft.text.trim() : !draft.blob}>Salvar</button>
+            <button className="block" onClick={save} disabled={(draft.kind === 'texto' ? !draft.text.trim() : !draft.blob) || !(bookId ?? draft.bookId)}>Salvar</button>
           </div>
         </Modal>
       )}

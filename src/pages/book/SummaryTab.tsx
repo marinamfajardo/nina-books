@@ -75,6 +75,11 @@ export function SummaryTab({ book }: { book: Book }) {
       </div>
 
       <div className="card">
+        <h3>📖 Sinopse</h3>
+        <EditableText value={book.synopsis} placeholder="Ainda sem sinopse. Escreva com suas palavras (por exemplo, quando terminar a leitura) ou cole a da editora." onSave={(v) => updateBook(book.id, { synopsis: v || undefined })} />
+      </div>
+
+      <div className="card">
         <h3>Meu resumo</h3>
         <EditableText value={book.summaryManual} placeholder="Escreva com suas palavras do que o livro trata." onSave={(v) => updateBook(book.id, { summaryManual: v || undefined })} />
       </div>

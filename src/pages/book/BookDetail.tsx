@@ -33,6 +33,7 @@ export default function BookDetail() {
   const [editing, setEditing] = useState(false);
   const [finishing, setFinishing] = useState<'lido' | 'desisti' | null>(null);
   const [finishDate, setFinishDate] = useState(today());
+  const [finishSynopsis, setFinishSynopsis] = useState('');
   const sessions = useLiveQuery(() => (id ? db.sessions.where('bookId').equals(id).toArray() : []), [id]) ?? [];
   const readings = useLiveQuery(() => (id ? db.readings.where('bookId').equals(id).toArray() : []), [id]) ?? [];
   const loan = useLiveQuery(() => (id ? db.loans.where('bookId').equals(id).filter((l) => !l.returnedAt).first() : undefined), [id]);
@@ -48,6 +49,7 @@ export default function BookDetail() {
     if (!s || s === book.status) return;
     if (s === 'lido' || s === 'desisti') {
       setFinishDate(today());
+      setFinishSynopsis(book.synopsis ?? '');
       setFinishing(s);
       return;
     }
@@ -118,8 +120,13 @@ export default function BookDetail() {
             </div>
             {loan && <div className="alert info small">📤 Emprestado para <b>{loan.person}</b> desde {fmtDate(loan.date)}. <Link to="/emprestimos">Ver empréstimos</Link></div>}
           </div>
-          {book.synopsis && (
-            <div className="card"><h3>Sinopse da editora</h3><p className="pre">{book.synopsis}</p></div>
+          {book.synopsis ? (
+            <div className="card">
+              <div className="row between"><h3 style={{ margin: 0 }}>📖 Sinopse</h3><button className="ghost small" onClick={() => setParams({ aba: 'resumo' }, { replace: true })}>editar</button></div>
+              <p className="pre">{book.synopsis}</p>
+            </div>
+          ) : (
+            <button className="secondary block" style={{ marginBottom: 14 }} onClick={() => setParams({ aba: 'resumo' }, { replace: true })}>📖 Adicionar sinopse</button>
           )}
           <div className="row">
             <Link to={`/emprestimos?livro=${book.id}`} className="btn secondary grow">📤 Emprestar</Link>
@@ -159,7 +166,7 @@ export default function BookDetail() {
                 const s = d.status;
                 await updateFromDraft(book.id, { ...d, status: book.status });
                 setEditing(false);
-                if (s !== book.status) { setFinishDate(today()); setFinishing(s); }
+                if (s !== book.status) { setFinishDate(today()); setFinishSynopsis(d.synopsis ?? book.synopsis ?? ''); setFinishing(s); }
                 return;
               }
               await updateFromDraft(book.id, d);
@@ -176,6 +183,11 @@ export default function BookDetail() {
             <label className="field"><span>{finishing === 'lido' ? 'Quando terminou?' : 'Quando parou?'}</span>
               <input type="date" value={finishDate} max={today()} onChange={(e) => setFinishDate(e.target.value)} />
             </label>
+            {finishing === 'lido' && (
+              <label className="field"><span>📖 Sinopse do livro (opcional)</span>
+                <textarea rows={5} value={finishSynopsis} onChange={(e) => setFinishSynopsis(e.target.value)} placeholder="Agora que você terminou, escreva a sinopse com suas palavras…" />
+              </label>
+            )}
             <p className="small muted">
               {finishing === 'lido'
                 ? 'As páginas que ainda não estavam registradas em sessões serão contadas nesta data.'
@@ -183,6 +195,9 @@ export default function BookDetail() {
             </p>
             <button className="block" onClick={async () => {
               await changeStatus(book.id, finishing, finishDate || today());
+              if (finishing === 'lido' && finishSynopsis.trim() !== (book.synopsis ?? '')) {
+                await updateBook(book.id, { synopsis: finishSynopsis.trim() || undefined });
+              }
               setFinishing(null);
               toast(finishing === 'lido' ? 'Parabéns pela leitura! 📖' : 'Status: Desisti');
             }}>Confirmar</button>
