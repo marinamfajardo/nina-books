@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
@@ -9,6 +10,10 @@ import { FACTS, REMINDERS } from './domain/inspiration';
 declare const self: ServiceWorkerGlobalScope;
 
 // ---------- Funcionar offline ----------
+// versão nova assume na hora (sem esperar todas as janelas do app fecharem)
+self.skipWaiting();
+clientsClaim();
+
 precacheAndRoute(self.__WB_MANIFEST);
 cleanupOutdatedCaches();
 self.addEventListener('message', (e) => {
