@@ -164,20 +164,22 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
         </select>
       </label>
       <label className="field"><span>📍 Onde o livro está</span>
-        <select value={d.location ?? ''} onChange={async (e) => {
-          let v = e.target.value;
-          if (v === '__novo') {
-            v = prompt('Nome do local (ex.: Vitória, São Paulo, casa da mãe):')?.trim() ?? '';
-            if (v) await ensureListItems('location', [v]);
-          }
-          set({ location: v || undefined });
-        }}>
-          <option value="">—</option>
-          {[...new Set([...locations, ...(d.location ? [d.location] : [])])].map((l) => <option key={l}>{l}</option>)}
-          <option value="__novo">+ Adicionar local…</option>
-        </select>
+        <input
+          list="location-list"
+          placeholder="Ex.: Em Vitória, Em São Paulo, Emprestado para Fulana"
+          value={d.location ?? ''}
+          onChange={(e) => set({ location: e.target.value || undefined })}
+          onBlur={(e) => set({ location: e.target.value.trim() || undefined })}
+        />
       </label>
-      <p className="small muted" style={{ marginTop: -6 }}>Livros emprestados aparecem como “Emprestado para …” automaticamente (registre em Emprestar).</p>
+      <datalist id="location-list">{locations.map((l) => <option key={l} value={l} />)}</datalist>
+      {locations.length > 0 && (
+        <div className="chips" style={{ marginTop: -4 }}>
+          {locations.map((l) => (
+            <button key={l} type="button" className={`chip${d.location === l ? ' on' : ''}`} onClick={() => set({ location: d.location === l ? undefined : l })}>{l}</button>
+          ))}
+        </div>
+      )}
       <div className="grid2">
         <label className="field"><span>Formato</span>
           <select value={d.format ?? ''} onChange={(e) => set({ format: (e.target.value || undefined) as Format | undefined })}>
