@@ -2,7 +2,9 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BookBrowser, BookList } from '../components/BookBrowser';
-import { Icon } from '../components/ui';
+import { Cover, Icon, Progress } from '../components/ui';
+import type { Book } from '../db';
+import { SessionForm } from './book/ReadingTab';
 import { db } from '../db';
 import { useLibrary } from '../data/hooks';
 import { GROUP_LABEL, matches, type GroupKey } from '../domain/filters';
@@ -70,6 +72,38 @@ function BackupReminder() {
   );
 }
 
+/** Livros em leitura, sempre no topo da estante, com progresso e registro rápido de páginas. */
+function ReadingNow() {
+  const lib = useLibrary();
+  const [form, setForm] = useState<Book | null>(null);
+  const reading = lib.books
+    .filter((b) => b.status === 'lendo' || b.status === 'relendo')
+    .sort((a, b) => (lib.meta.get(b.id)?.pct ?? 0) - (lib.meta.get(a.id)?.pct ?? 0));
+  if (!reading.length) return null;
+  return (
+    <div className="card reading-now">
+      <h3 style={{ margin: '0 0 8px' }}>📖 Lendo agora</h3>
+      <div className="strip">
+        {reading.map((b) => {
+          const m = lib.meta.get(b.id);
+          return (
+            <div key={b.id} className="reading-item">
+              <Link to={`/livro/${b.id}?aba=leitura`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Cover book={b} pct={m?.pct} />
+                <div className="small ellipsis" style={{ fontWeight: 700, marginTop: 4 }}>{b.title}</div>
+              </Link>
+              <div className="small muted">{b.pageCount ? `p. ${m?.page ?? 0} de ${b.pageCount} · ${m?.pct ?? 0}%` : `p. ${m?.page ?? 0}`}</div>
+              <Progress pct={m?.pct ?? 0} />
+              <button className="secondary small block" style={{ marginTop: 6 }} onClick={() => setForm(b)}>+ páginas</button>
+            </div>
+          );
+        })}
+      </div>
+      {form && <SessionForm book={form} fromPage={lib.meta.get(form.id)?.page ?? 0} onClose={() => setForm(null)} />}
+    </div>
+  );
+}
+
 export default function Shelf() {
   const [q, setQ] = useState('');
   return (
@@ -89,6 +123,7 @@ export default function Shelf() {
         <SearchResults q={q.trim()} />
       ) : (
         <>
+          <ReadingNow />
           <div className="daily-cards">
             <QuoteOfDayCard />
             <PillCard />

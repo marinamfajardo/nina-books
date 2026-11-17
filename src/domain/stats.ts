@@ -112,6 +112,8 @@ export const totals = (sessions: Session[], books: Map<string, Book>): Totals =>
 export const totalsByPeriod = (sessions: Session[], books: Map<string, Book>, period: Period) => {
   const map = new Map<string, Totals>();
   for (const s of sessions) {
+    // leituras antigas com data aproximada não entram nos gráficos por dia ou semana
+    if (s.approx && (period === 'dia' || period === 'semana')) continue;
     const k = periodKey(s.date, period);
     if (!map.has(k)) map.set(k, emptyTotals());
     addSession(map.get(k)!, s, books.get(s.bookId));
@@ -161,7 +163,7 @@ export const finishedByPeriod = (readings: Reading[], period: Period) => {
 
 /** Sequência de dias seguidos lendo. Conta até hoje, ou até ontem se hoje ainda não teve leitura. */
 export const streaks = (sessions: Session[], ref = today()) => {
-  const days = new Set(sessions.filter((s) => sessionPages(s) > 0 || (s.durationSec ?? 0) > 0).map((s) => s.date));
+  const days = new Set(sessions.filter((s) => !s.approx && (sessionPages(s) > 0 || (s.durationSec ?? 0) > 0)).map((s) => s.date));
   let current = 0;
   let cursor = days.has(ref) ? ref : addDays(ref, -1);
   while (days.has(cursor)) {
@@ -251,7 +253,7 @@ export const formatDuration = (sec: number) => {
 /** Páginas lidas em cada dia (AAAA-MM-DD → páginas). */
 export const pagesByDay = (sessions: Session[]) => {
   const m = new Map<string, number>();
-  for (const s of sessions) m.set(s.date, (m.get(s.date) ?? 0) + sessionPages(s));
+  for (const s of sessions) if (!s.approx) m.set(s.date, (m.get(s.date) ?? 0) + sessionPages(s));
   return m;
 };
 

@@ -7,9 +7,13 @@ import { DEFAULT_WORDS_PER_PAGE, FORMAT_LABEL, OWNERSHIP_LABEL, STATUS_LABEL, ST
 import { hasApiKey, researchBook } from '../services/claude';
 import { shrinkImage } from '../services/media';
 import { CoverStep } from './CoverCropper';
+import { FeelingPicker } from './FeelingPicker';
+import { COUNTRY_OPTIONS, toCountryCode } from '../domain/countries';
 import { CaptureButton, ChipSelect, Cover, ErrorBox, Modal, MultiChips, Stars } from './ui';
 
-export type BookDraft = Partial<Book> & { title: string; authors: string[]; coverBlob?: Blob };
+export type BookDraft = Partial<Book> & { title: string; authors: string[]; coverBlob?: Blob; readYear?: number; readMonth?: number };
+
+const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
 const num = (s: string) => (s.trim() === '' ? undefined : Math.max(0, Number(s)) || undefined);
 
@@ -34,6 +38,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
         publisher: d.publisher ?? r.publisher, year: d.year ?? r.year, pageCount: d.pageCount ?? r.pageCount,
         originalLanguage: d.originalLanguage ?? r.originalLanguage, synopsis: d.synopsis ?? r.synopsis,
         series: d.series ?? r.series, seriesNumber: d.seriesNumber ?? r.seriesNumber,
+        country: d.country ?? toCountryCode(r.country),
       });
     } catch (e) {
       setErr((e as Error).message);
@@ -60,7 +65,7 @@ function SummaryChooser({ d, set, authors }: { d: BookDraft; set: (p: Partial<Bo
           {noWeb && <p className="small muted" style={{ margin: '6px 0 0' }}>⚠️ Desta vez a IA não conseguiu pesquisar na internet e escreveu com o que já sabe. Confira as informações.</p>}
           <textarea className="mt" rows={10} style={{ minHeight: 220 }} value={d.summaryAI} onChange={(e) => set({ summaryAI: e.target.value })} />
           {d.summaryAISources?.length ? <p className="small muted">Fontes: {d.summaryAISources.map((s) => s.title).slice(0, 3).join(' · ')}</p> : null}
-          <p className="small muted">A IA também completou editora, ano, páginas e série quando encontrou. Confira abaixo.</p>
+          <p className="small muted">A IA também completou editora, ano, páginas, série e país de origem quando encontrou. Confira abaixo.</p>
         </div>
       )}
       {mode === 'manual' && (
@@ -133,6 +138,12 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
         <label className="field"><span>ISBN</span><input inputMode="numeric" value={d.isbn ?? ''} onChange={(e) => set({ isbn: e.target.value.replace(/[^0-9Xx]/g, '') || undefined })} /></label>
         <label className="field"><span>Nº de páginas</span><input inputMode="numeric" value={d.pageCount ?? ''} onChange={(e) => set({ pageCount: num(e.target.value) })} /></label>
       </div>
+      <label className="field"><span>🌍 País onde foi escrito (original)</span>
+        <select value={d.country ?? ''} onChange={(e) => set({ country: e.target.value || undefined })}>
+          <option value="">—</option>
+          {COUNTRY_OPTIONS.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+        </select>
+      </label>
       <label className="field"><span>Idioma original</span><input value={d.originalLanguage ?? ''} onChange={(e) => set({ originalLanguage: e.target.value || undefined })} list="langs" /></label>
       <datalist id="langs">{languages.map((l) => <option key={l} value={l} />)}</datalist>
       <label className="field"><span>Sinopse da editora</span><textarea value={d.synopsis ?? ''} onChange={(e) => set({ synopsis: e.target.value || undefined })} /></label>
@@ -141,9 +152,30 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
       <div className="field"><span className="small muted" style={{ fontWeight: 700 }}>Status</span>
         <ChipSelect options={STATUSES} labels={STATUS_LABEL} value={d.status} onChange={(s) => set({ status: (s ?? 'quero_ler') as Status })} />
       </div>
+      {withSummary && d.status === 'lido' && (
+        <div className="card" style={{ background: 'var(--surface-2)', boxShadow: 'none' }}>
+          <b>📅 Quando você leu?</b>
+          <div className="grid2 mt">
+            <label className="field"><span>Ano</span>
+              <input inputMode="numeric" placeholder={String(new Date().getFullYear())} value={d.readYear ?? ''}
+                onChange={(e) => set({ readYear: Number(e.target.value.replace(/\D/g, '').slice(0, 4)) || undefined })} />
+            </label>
+            <label className="field"><span>Mês (opcional)</span>
+              <select value={d.readMonth ?? ''} onChange={(e) => set({ readMonth: Number(e.target.value) || undefined })}>
+                <option value="">Não lembro</option>
+                {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              </select>
+            </label>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>Para livros que você leu antes de usar o app (ex.: 2019). Em branco = terminei hoje.</p>
+        </div>
+      )}
       <div className="row between">
         <label className="row"><input type="checkbox" checked={!!d.favorite} onChange={(e) => set({ favorite: e.target.checked })} /> Favorito ♥</label>
         <Stars value={d.rating ?? 0} onChange={(rating) => set({ rating })} />
+      </div>
+      <div><span className="small muted" style={{ fontWeight: 700 }}>Como o livro me fez sentir</span>
+        <FeelingPicker value={d.feelings ?? []} onChange={(feelings) => set({ feelings })} />
       </div>
       <div><span className="small muted" style={{ fontWeight: 700 }}>Gêneros (pode escolher vários)</span>
         <MultiChips options={genres} value={d.genres ?? []} onChange={(g) => set({ genres: g })}

@@ -54,7 +54,8 @@ export async function findByIsbn(isbn?: string) {
   return db.books.where('isbn').equals(isbn).first();
 }
 
-export async function createBook(data: NewBook) {
+/** `finished`: para livros já lidos no passado (data e se ela é aproximada). */
+export async function createBook(data: NewBook, finished?: { date: string; approx?: 'ano' | 'mes' }) {
   const book: Book = {
     status: 'quero_ler', favorite: false, rating: 0, genres: [], tags: [],
     ...data,
@@ -68,7 +69,7 @@ export async function createBook(data: NewBook) {
   if (book.status !== 'quero_ler') {
     const s = book.status;
     book.status = 'quero_ler';
-    await changeStatus(book.id, s);
+    await changeStatus(book.id, s, finished?.date ?? today(), finished?.approx);
   }
   return book.id;
 }
@@ -103,7 +104,7 @@ async function startReading(bookId: string, date: string) {
  * - Lido fecha a leitura e registra as páginas que faltavam;
  * - Desisti fecha a leitura sem somar páginas extras.
  */
-export async function changeStatus(bookId: string, status: Status, date = today()) {
+export async function changeStatus(bookId: string, status: Status, date = today(), approx?: 'ano' | 'mes') {
   await db.transaction('rw', db.books, db.readings, db.sessions, async () => {
     const book = await db.books.get(bookId);
     if (!book) return;
@@ -122,9 +123,9 @@ export async function changeStatus(bookId: string, status: Status, date = today(
       const sessions = await db.sessions.where('readingId').equals(open.id).toArray();
       const close = closingSession(sessions, open.id, book.pageCount);
       if (close) {
-        await db.sessions.add({ id: uid(), bookId, readingId: open.id, date, ...close, auto: true, createdAt: nowIso() });
+        await db.sessions.add({ id: uid(), bookId, readingId: open.id, date, ...close, auto: true, ...(approx ? { approx: true } : {}), createdAt: nowIso() });
       }
-      await db.readings.update(open.id, { outcome: 'concluida', finishedAt: date });
+      await db.readings.update(open.id, { outcome: 'concluida', finishedAt: date, ...(approx ? { approx } : {}) });
     }
     if (status === 'desisti' && open) {
       await db.readings.update(open.id, { outcome: 'abandonada', finishedAt: date });

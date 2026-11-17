@@ -31,6 +31,10 @@ export interface Book {
   genres: string[];
   tags: string[];
   readingLanguage?: string;
+  /** Como o livro me fez sentir (emojis) */
+  feelings?: string[];
+  /** País onde o livro foi escrito originalmente (código ISO de 2 letras, ex.: "BR") */
+  country?: string;
   /** Onde o livro está (ex.: "Vitória", "São Paulo") */
   location?: string;
   format?: Format;
@@ -55,6 +59,8 @@ export interface Reading {
   startedAt: string; // AAAA-MM-DD
   finishedAt?: string;
   outcome: 'andamento' | 'concluida' | 'abandonada';
+  /** Leitura antiga registrada só com o ano ('ano') ou com ano e mês ('mes') */
+  approx?: 'ano' | 'mes';
 }
 
 export interface Session {
@@ -67,6 +73,8 @@ export interface Session {
   durationSec?: number;
   /** Sessão criada automaticamente ao marcar como Lido */
   auto?: boolean;
+  /** Data aproximada (livro lido no passado, só com ano ou mês): fica fora do calendário e da sequência de dias */
+  approx?: boolean;
   createdAt: string;
 }
 
@@ -74,6 +82,8 @@ export interface Note {
   id: string;
   bookId: string;
   kind: 'texto' | 'audio' | 'video' | 'foto';
+  /** Sentimento do momento (emoji) */
+  feeling?: string;
   title?: string;
   text?: string;
   mediaId?: string;

@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { PageTitle, Progress } from '../components/ui';
 import { ReadingCalendar } from '../components/ReadingCalendar';
+import { WorldMap } from '../components/WorldMap';
+import { countFeelings } from '../domain/feelings';
 import { db, type Book, type Session } from '../db';
 import { useLibrary } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL } from '../domain/constants';
@@ -122,6 +124,9 @@ export default function Stats() {
       </div>
 
       <ReadingCalendar year={goalYear} sessions={lib.sessions} books={lib.bookMap} />
+
+      <WorldMap books={lib.books} />
+      <FeelingsCard books={lib.books} />
 
       <div className="card">
         <div className="row between">
@@ -290,6 +295,26 @@ function GenreAnalysis({ sessions, books, readBooks }: { sessions: Session[]; bo
         </tbody>
       </table>
       {anyEstimate && <p className="small muted">* inclui estimativa para sessões sem cronômetro, usando o seu ritmo médio. Use o cronômetro na aba Leitura para medir o tempo real.</p>}
+    </div>
+  );
+}
+
+/** Sentimentos mais frequentes nas suas leituras. */
+function FeelingsCard({ books }: { books: Book[] }) {
+  const rows = countFeelings(books);
+  if (!rows.length) return null;
+  const max = rows[0].count;
+  return (
+    <div className="card">
+      <h3>💗 Como os livros te fizeram sentir</h3>
+      {rows.map((r) => (
+        <div key={r.emoji} className="row nowrap" style={{ gap: 8, margin: '4px 0' }}>
+          <span style={{ fontSize: '1.4rem', width: 30 }}>{r.emoji}</span>
+          <span className="small" style={{ width: 110 }}>{r.label}</span>
+          <div className="grow"><Progress pct={Math.round((r.count / max) * 100)} /></div>
+          <b className="small">{r.count}</b>
+        </div>
+      ))}
     </div>
   );
 }

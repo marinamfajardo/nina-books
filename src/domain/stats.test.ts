@@ -185,3 +185,20 @@ describe('calendário e tempo por gênero', () => {
     expect(g[0].recordedSec).toBe(0);
   });
 });
+
+describe('livros lidos no passado (data aproximada)', () => {
+  const books = new Map([['b1', book()]]);
+  const ss = [
+    session({ date: '2019-12-31', startPage: 0, endPage: 300, auto: true, approx: true }),
+    session({ date: '2026-05-02', startPage: 0, endPage: 20 }),
+  ];
+  it('entram no total do ano e do mês', () => {
+    expect(totalsByPeriod(ss, books, 'ano').map((t) => [t.key, t.pages])).toEqual([['2019', 300], ['2026', 20]]);
+    expect(totalsByPeriod(ss, books, 'mes')[0]).toMatchObject({ key: '2019-12', pages: 300 });
+  });
+  it('ficam fora do calendário, da sequência e dos gráficos por dia/semana', () => {
+    expect(pagesByDay(ss).has('2019-12-31')).toBe(false);
+    expect(totalsByPeriod(ss, books, 'dia').map((t) => t.key)).toEqual(['2026-05-02']);
+    expect(streaks(ss, '2020-01-01').current).toBe(0);
+  });
+});

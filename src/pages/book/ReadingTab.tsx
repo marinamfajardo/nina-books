@@ -47,7 +47,7 @@ function Timer({ bookId, onFinish }: { bookId: string; onFinish: (sec: number) =
   );
 }
 
-function SessionForm({ book, fromPage, durationSec, onClose }: { book: Book; fromPage: number; durationSec?: number; onClose: () => void }) {
+export function SessionForm({ book, fromPage, durationSec, onClose }: { book: Book; fromPage: number; durationSec?: number; onClose: () => void }) {
   const toast = useToast();
   const [date, setDate] = useState(today());
   const [start, setStart] = useState(String(fromPage));

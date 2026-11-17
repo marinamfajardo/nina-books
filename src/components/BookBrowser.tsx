@@ -45,6 +45,7 @@ export function BookList({ books, meta }: { books: Book[]; meta: Map<string, Boo
               <div className="row" style={{ gap: 6, marginTop: 4 }}>
                 <span className="badge">{STATUS_LABEL[b.status]}</span>
                 {b.rating > 0 && <Stars value={b.rating} />}
+                {b.feelings?.length ? <span>{b.feelings.slice(0, 4).join('')}</span> : null}
                 {m && m.pct > 0 && m.pct < 100 && <span className="small muted">{m.pct}%</span>}
               </div>
             </div>

@@ -216,6 +216,8 @@ export interface BookResearch {
   synopsis?: string;
   series?: string;
   seriesNumber?: number;
+  /** país onde foi escrito (código ou nome, normalizado no formulário) */
+  country?: string;
 }
 
 /** Pesquisa o livro na internet: resumo em português e dados da edição. */
@@ -228,14 +230,15 @@ export async function researchBook(title: string, authors: string[]): Promise<Bo
       'em tom acolhedor e claro. Use a busca na web para confirmar os fatos sobre o livro antes de escrever.',
     content:
       `Pesquise o livro ${desc}. Depois responda só com JSON neste formato:\n` +
-      '{"resumo": "...", "editora": "...", "ano": 0, "paginas": 0, "idioma_original": "...", "sinopse": "...", "serie": "...", "volume": 0}\n' +
+      '{"resumo": "...", "editora": "...", "ano": 0, "paginas": 0, "idioma_original": "...", "sinopse": "...", "serie": "...", "volume": 0, "pais_original": "..."}\n' +
       '- resumo: 3 a 5 parágrafos (separados por \\n\\n) sobre premissa, temas, estilo e contexto da obra; ' +
       'avise "⚠️ Contém spoilers" antes de revelar o final, se for o caso.\n' +
       '- editora, ano e paginas: da edição brasileira, se existir; senão da original. Use null se não souber.\n' +
       '- idioma_original em português (ex.: "Inglês"). sinopse: a sinopse oficial curta, se encontrar, senão null.\n' +
-      '- serie e volume: se o livro faz parte de uma série ou saga, o nome da série em português (ex.: "Harry Potter") e o número do volume; senão null.',
+      '- serie e volume: se o livro faz parte de uma série ou saga, o nome da série em português (ex.: "Harry Potter") e o número do volume; senão null.\n' +
+      '- pais_original: o país onde o livro foi ESCRITO e publicado originalmente (não onde a história se passa), como código ISO de 2 letras (ex.: "BR", "GB"); null se não souber.',
   });
-  const j = parseJson<{ resumo?: string; editora?: string | null; ano?: number | null; paginas?: number | null; idioma_original?: string | null; sinopse?: string | null; serie?: string | null; volume?: number | null }>(text);
+  const j = parseJson<{ resumo?: string; editora?: string | null; ano?: number | null; paginas?: number | null; idioma_original?: string | null; sinopse?: string | null; serie?: string | null; volume?: number | null; pais_original?: string | null }>(text);
   const summary = (j?.resumo ?? (j ? '' : text)).trim();
   if (!summary) throw new AIError('A IA não encontrou informações sobre esse livro. Você pode escrever o resumo.');
   return {
@@ -249,6 +252,7 @@ export async function researchBook(title: string, authors: string[]): Promise<Bo
     synopsis: j?.sinopse || undefined,
     series: j?.serie || undefined,
     seriesNumber: j?.volume && j.volume > 0 ? j.volume : undefined,
+    country: j?.pais_original || undefined,
   };
 }
 

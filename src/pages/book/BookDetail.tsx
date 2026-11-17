@@ -3,6 +3,9 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { SeriesStrip } from '../../components/BookBrowser';
 import { BookForm } from '../../components/BookForm';
+import { FeelingPicker } from '../../components/FeelingPicker';
+import { feelingLabel } from '../../domain/feelings';
+import { countryName } from '../../domain/countries';
 import { ChipSelect, Cover, Modal, Progress, Stars, fmtDate, useToast } from '../../components/ui';
 import { db } from '../../db';
 import { changeStatus, deleteBook, updateBook } from '../../data/actions';
@@ -82,6 +85,7 @@ export default function BookDetail() {
             {[book.publisher, book.year, book.pageCount && `${book.pageCount} páginas`, book.isbn && `ISBN ${book.isbn}`].filter(Boolean).join(' · ')}
           </div>
           <div className="mt"><Stars value={book.rating} onChange={(rating) => updateBook(book.id, { rating })} /></div>
+          {book.feelings?.length ? <div className="feeling-row mt" title={book.feelings.map(feelingLabel).join(', ')}>{book.feelings.join(' ')}</div> : null}
           {book.pageCount ? (
             <div className="mt">
               <div className="row between small"><span>Página {book.status === 'lido' ? book.pageCount : page} de {book.pageCount}</span><b>{pct}%</b></div>
@@ -112,6 +116,7 @@ export default function BookDetail() {
             <div className="grid2 small">
               <div><span className="muted">Li em</span><br /><b>{book.readingLanguage ?? '—'}</b></div>
               <div><span className="muted">Idioma original</span><br /><b>{book.originalLanguage ?? '—'}</b></div>
+              <div><span className="muted">🌍 Escrito em</span><br /><b>{book.country ? countryName(book.country) : '—'}</b></div>
               <div><span className="muted">Formato</span><br /><b>{book.format ? FORMAT_LABEL[book.format] : '—'}</b></div>
               <div><span className="muted">Exemplar</span><br /><b>{book.ownership ? OWNERSHIP_LABEL[book.ownership] : '—'}</b></div>
               <div><span className="muted">📍 Onde está</span><br /><b>{loan ? `Emprestado para ${loan.person}` : book.location ?? '—'}</b></div>
@@ -119,6 +124,10 @@ export default function BookDetail() {
               {last?.finishedAt && <div><span className="muted">{last.outcome === 'abandonada' ? 'Desisti em' : 'Conclusão'}</span><br /><b>{fmtDate(last.finishedAt)}</b></div>}
             </div>
             {loan && <div className="alert info small">📤 Emprestado para <b>{loan.person}</b> desde {fmtDate(loan.date)}. <Link to="/emprestimos">Ver empréstimos</Link></div>}
+          </div>
+          <div className="card">
+            <h3>💗 Como o livro me fez sentir</h3>
+            <FeelingPicker value={book.feelings ?? []} onChange={(feelings) => updateBook(book.id, { feelings })} />
           </div>
           {book.synopsis ? (
             <div className="card">
@@ -183,6 +192,11 @@ export default function BookDetail() {
             <label className="field"><span>{finishing === 'lido' ? 'Quando terminou?' : 'Quando parou?'}</span>
               <input type="date" value={finishDate} max={today()} onChange={(e) => setFinishDate(e.target.value)} />
             </label>
+            {finishing === 'lido' && (
+              <div><span className="small muted" style={{ fontWeight: 700 }}>💗 Como o livro te fez sentir?</span>
+                <FeelingPicker value={book.feelings ?? []} onChange={(feelings) => updateBook(book.id, { feelings })} />
+              </div>
+            )}
             {finishing === 'lido' && (
               <label className="field"><span>📖 Sinopse do livro (opcional)</span>
                 <textarea rows={5} value={finishSynopsis} onChange={(e) => setFinishSynopsis(e.target.value)} placeholder="Agora que você terminou, escreva a sinopse com suas palavras…" />

@@ -1,6 +1,8 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Link } from 'react-router-dom';
 import { useLibrary } from '../../data/hooks';
+import { FeelingPicker } from '../../components/FeelingPicker';
+import { feelingLabel } from '../../domain/feelings';
 import { useEffect, useRef, useState } from 'react';
 import { CaptureButton, ErrorBox, fmtDateTime, Modal, useToast } from '../../components/ui';
 import { db, nowIso, uid, type Note } from '../../db';
@@ -78,7 +80,7 @@ function MediaPlayer({ note }: { note: Note }) {
     : <video controls playsInline src={url} style={{ width: '100%', borderRadius: 12, maxHeight: 420, background: '#000' }} />;
 }
 
-type Draft = { kind: Note['kind']; title: string; text: string; page: string; blob?: Blob; seconds?: number; bookId?: string };
+type Draft = { kind: Note['kind']; title: string; text: string; page: string; blob?: Blob; seconds?: number; bookId?: string; feeling?: string };
 
 const LAST_BOOK = 'nina.notes.lastBook';
 
@@ -109,7 +111,7 @@ export function NotesTab({ bookId, mode }: { bookId?: string; mode: 'comentarios
     const mediaId = draft.blob ? await saveMedia(draft.blob, draft.title) : undefined;
     await db.notes.add({
       id: uid(), bookId: target, kind: draft.kind, title: draft.title.trim() || undefined, text: draft.text.trim() || undefined,
-      mediaId, page: draft.page ? Number(draft.page) : undefined, createdAt: nowIso(),
+      mediaId, page: draft.page ? Number(draft.page) : undefined, feeling: draft.feeling, createdAt: nowIso(),
     });
     setDraft(null);
     toast({ texto: 'Comentário salvo', audio: 'Áudio salvo no livro 🎙️', video: 'Vídeo salvo no livro 🎥', foto: 'Foto salva no livro 📷' }[draft.kind]);
@@ -169,7 +171,7 @@ export function NotesTab({ bookId, mode }: { bookId?: string; mode: 'comentarios
         {notes.map((n) => (
           <div className="ev card" key={n.id}>
             <div className="row between small muted">
-              <span>{{ texto: '✍️', audio: '🎙️', video: '🎥', foto: '📷' }[n.kind]} {fmtDateTime(n.createdAt)}{n.page ? ` · p. ${n.page}` : ''}</span>
+              <span>{{ texto: '✍️', audio: '🎙️', video: '🎥', foto: '📷' }[n.kind]} {fmtDateTime(n.createdAt)}{n.page ? ` · p. ${n.page}` : ''}{n.feeling ? <span title={feelingLabel(n.feeling)} style={{ fontSize: '1.2rem', marginLeft: 6 }}>{n.feeling}</span> : null}</span>
               <span>
                 <button className="icon small" onClick={() => setEditing(n)} aria-label="Editar">✎</button>
                 <button className="icon small" onClick={() => remove(n)} aria-label="Apagar">✕</button>
@@ -201,6 +203,11 @@ export function NotesTab({ bookId, mode }: { bookId?: string; mode: 'comentarios
             <label className="field"><span>{draft.kind === 'texto' ? 'Título (opcional)' : 'Nome'}</span><input value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} /></label>
             {draft.kind === 'texto' && <label className="field"><span>Comentário</span><textarea autoFocus value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>}
             {draft.kind !== 'texto' && <label className="field"><span>Descrição (opcional)</span><input value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })} /></label>}
+            {draft.kind !== 'foto' && (
+              <div><span className="small muted" style={{ fontWeight: 700 }}>Como você está se sentindo? (opcional)</span>
+                <FeelingPicker single value={draft.feeling ? [draft.feeling] : []} onChange={(v) => setDraft({ ...draft, feeling: v[0] })} />
+              </div>
+            )}
             <label className="field"><span>Página (opcional)</span><input inputMode="numeric" value={draft.page} onChange={(e) => setDraft({ ...draft, page: e.target.value.replace(/\D/g, '') })} /></label>
             <button className="block" onClick={save} disabled={(draft.kind === 'texto' ? !draft.text.trim() : !draft.blob) || !(bookId ?? draft.bookId)}>Salvar</button>
           </div>

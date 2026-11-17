@@ -86,3 +86,14 @@ describe('importação e exclusão', () => {
     expect(await db.readings.count()).toBe(0);
   });
 });
+
+describe('cadastrar livro já lido', () => {
+  it('registra a leitura no ano informado', async () => {
+    const id = await createBook({ title: 'Antigo', authors: [], pageCount: 250, status: 'lido' }, { date: '2019-12-31', approx: 'ano' });
+    const [r] = await readingsOf(id);
+    expect(r).toMatchObject({ outcome: 'concluida', finishedAt: '2019-12-31', approx: 'ano' });
+    const ss = await db.sessions.where('bookId').equals(id).toArray();
+    expect(ss).toHaveLength(1);
+    expect(ss[0]).toMatchObject({ date: '2019-12-31', endPage: 250, approx: true });
+  });
+});

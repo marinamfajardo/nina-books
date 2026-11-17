@@ -351,3 +351,27 @@ label.field > span { display: block; font-size: 0.82rem; font-weight: 700; color
 .cal-d.l4 { background: #6d1a36; cursor: pointer; }
 .cal-d.today { outline: 2px solid var(--accent); outline-offset: 1px; }
 span.cal-d { width: 12px; height: 12px; min-width: 12px; }
+
+/* ---------- Lendo agora ---------- */
+.reading-now { border-top: 4px solid var(--accent); }
+.reading-item { width: 118px; flex: none; }
+@media (min-width: 700px) { .reading-item { width: 140px; } }
+
+/* ---------- Sentimentos ---------- */
+.feelings { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+.feeling { flex-direction: column; gap: 2px; padding: 6px 4px; min-height: 0; border-radius: 12px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); font-weight: 400; }
+.feeling .fe { font-size: 1.5rem; line-height: 1.1; }
+.feeling .fl { font-size: 0.68rem; color: var(--muted); }
+.feeling.on { background: var(--rosa-claro); border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+:root[data-theme='dark'] .feeling.on { background: #4a1d2a; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) .feeling.on { background: #4a1d2a; } }
+.feeling-row { font-size: 1.4rem; letter-spacing: 2px; }
+
+/* ---------- Mapa-múndi ---------- */
+.world-map svg { width: 100%; height: auto; display: block; margin-top: 8px; }
+.country { fill: var(--surface-2); stroke: var(--border); stroke-width: 0.5; }
+.country.l1 { fill: #f6dde3; cursor: pointer; }
+.country.l2 { fill: #e8a3b1; cursor: pointer; }
+.country.l3 { fill: #c7354f; cursor: pointer; }
+.country.l4 { fill: #6d1a36; cursor: pointer; }
+.country.sel { stroke: var(--accent); stroke-width: 2; }
