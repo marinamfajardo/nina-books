@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { PageTitle, Progress } from '../components/ui';
 import { ReadingCalendar } from '../components/ReadingCalendar';
@@ -29,7 +29,19 @@ const fmtKey = (key: string, period: Period) => {
 const groupLabel = (by: GroupBy, key: string) =>
   by === 'status' ? STATUS_LABEL[key as keyof typeof STATUS_LABEL] ?? key : by === 'formato' ? FORMAT_LABEL[key as keyof typeof FORMAT_LABEL] ?? key : key;
 
+function StatsTabs({ current }: { current: 'numeros' | 'mapa' }) {
+  const [, setParams] = useSearchParams();
+  return (
+    <div className="tabs">
+      <button className={current === 'numeros' ? 'on' : ''} onClick={() => setParams({}, { replace: true })}>📊 Estatísticas</button>
+      <button className={current === 'mapa' ? 'on' : ''} onClick={() => setParams({ aba: 'mapa' }, { replace: true })}>🗺️ Mapa e calendário</button>
+    </div>
+  );
+}
+
 export default function Stats() {
+  const [params] = useSearchParams();
+  const tab = params.get('aba') === 'mapa' ? 'mapa' : 'numeros';
   const lib = useLibrary();
   const goals = useLiveQuery(() => db.goals.toArray(), []) ?? [];
   const thisYear = new Date().getFullYear();
@@ -86,7 +98,15 @@ export default function Stats() {
           <option value="todos">Todos os anos</option>
         </select>
       }>Estatísticas</PageTitle>
+      <StatsTabs current={tab} />
 
+      {tab === 'mapa' ? (
+        <>
+          <ReadingCalendar year={goalYear} sessions={lib.sessions} books={lib.bookMap} />
+          <WorldMap books={lib.books} />
+        </>
+      ) : (
+      <>
       <div className="card">
         <div className="row between"><h3 style={{ margin: 0 }}>Desafio {goalYear}</h3><Link to="/metas" className="small">{goal ? 'Editar meta' : 'Definir meta'}</Link></div>
         {goal?.books ? (
@@ -123,9 +143,7 @@ export default function Stats() {
         <div className="kpi"><div className="v">{t.sessions}</div><div className="l">sessões de leitura</div></div>
       </div>
 
-      <ReadingCalendar year={goalYear} sessions={lib.sessions} books={lib.bookMap} />
-
-      <WorldMap books={lib.books} />
+      <Link to="/estatisticas?aba=mapa" className="group-tile" style={{ marginBottom: 14 }}><b>🗺️ Mapa-múndi e calendário de leitura</b><span className="muted">›</span></Link>
       <FeelingsCard books={lib.books} />
 
       <div className="card">
@@ -241,6 +259,8 @@ export default function Stats() {
           </div>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
