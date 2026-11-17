@@ -4,7 +4,7 @@ import { installOutbox } from './sync/outbox';
 export type Status = 'quero_ler' | 'lendo' | 'lido' | 'relendo' | 'desisti';
 export type Format = 'fisico' | 'ebook' | 'audio';
 export type Ownership = 'proprio' | 'emprestado' | 'biblioteca';
-export type ListKind = 'genre' | 'language' | 'tag';
+export type ListKind = 'genre' | 'language' | 'tag' | 'location';
 
 export interface Book {
   id: string;
@@ -31,6 +31,8 @@ export interface Book {
   genres: string[];
   tags: string[];
   readingLanguage?: string;
+  /** Onde o livro está (ex.: "Vitória", "São Paulo") */
+  location?: string;
   format?: Format;
   ownership?: Ownership;
   wordsPerPage?: number;

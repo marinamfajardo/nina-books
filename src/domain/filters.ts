@@ -1,10 +1,10 @@
 import type { Book, Format, Status } from '../db';
 import type { BookMeta } from '../data/hooks';
 
-export type GroupKey = 'genero' | 'idioma' | 'status' | 'autor' | 'ano' | 'tag' | 'formato' | 'serie';
+export type GroupKey = 'genero' | 'idioma' | 'status' | 'autor' | 'ano' | 'tag' | 'formato' | 'serie' | 'local';
 
 export const GROUP_LABEL: Record<GroupKey, string> = {
-  genero: 'Gênero', idioma: 'Idioma', status: 'Status', autor: 'Autor', ano: 'Ano de leitura', tag: 'Tag', formato: 'Formato', serie: 'Série / saga',
+  genero: 'Gênero', idioma: 'Idioma', status: 'Status', autor: 'Autor', ano: 'Ano de leitura', tag: 'Tag', formato: 'Formato', serie: 'Série / saga', local: 'Localização',
 };
 
 export interface Filters {
@@ -18,6 +18,7 @@ export interface Filters {
   tag?: string;
   author?: string;
   series?: string;
+  location?: string;
 }
 
 export type SortKey = 'adicao' | 'titulo' | 'autor' | 'conclusao' | 'nota' | 'paginas';
@@ -35,8 +36,13 @@ export const groupValues = (b: Book, m: BookMeta | undefined, by: GroupKey): str
     case 'tag': return b.tags;
     case 'formato': return b.format ? [b.format] : [];
     case 'serie': return b.series ? [b.series] : [];
+    case 'local': return [locationOf(b, m)];
   }
 };
+
+export const NO_LOCATION = 'Sem local definido';
+/** Onde o livro está: empréstimo em aberto tem prioridade sobre o local cadastrado. */
+export const locationOf = (b: Book, m?: BookMeta) => (m?.loanTo ? `Emprestado para ${m.loanTo}` : b.location || NO_LOCATION);
 
 /** Junta o filtro do grupo (ex.: gênero Fantasia) com os demais filtros. */
 export const groupToFilter = (by: GroupKey, value: string): Filters => {
@@ -49,6 +55,7 @@ export const groupToFilter = (by: GroupKey, value: string): Filters => {
     case 'tag': return { tag: value };
     case 'formato': return { format: value as Format };
     case 'serie': return { series: value };
+    case 'local': return { location: value };
   }
 };
 
@@ -63,6 +70,7 @@ export function applyFilters(books: Book[], meta: Map<string, BookMeta>, f: Filt
     if (f.tag && !b.tags.includes(f.tag)) return false;
     if (f.author && !b.authors.includes(f.author)) return false;
     if (f.series && b.series !== f.series) return false;
+    if (f.location && locationOf(b, meta.get(b.id)) !== f.location) return false;
     if (f.year && !meta.get(b.id)?.years.includes(f.year)) return false;
     return true;
   });

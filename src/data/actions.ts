@@ -20,8 +20,8 @@ export async function ensureListItems(kind: ListKind, names: (string | undefined
   }
 }
 
-const field: Record<ListKind, 'genres' | 'tags' | 'readingLanguage'> = {
-  genre: 'genres', tag: 'tags', language: 'readingLanguage',
+const field: Record<ListKind, 'genres' | 'tags' | 'readingLanguage' | 'location'> = {
+  genre: 'genres', tag: 'tags', language: 'readingLanguage', location: 'location',
 };
 
 /** Renomeia (ou remove, se newName vazio) um gênero/tag/idioma em todos os livros. */
@@ -34,8 +34,8 @@ export async function renameListItem(kind: ListKind, oldName: string, newName: s
     }
     const f = field[kind];
     await db.books.toCollection().modify((b) => {
-      if (f === 'readingLanguage') {
-        if (b.readingLanguage === oldName) b.readingLanguage = newName ?? undefined;
+      if (f === 'readingLanguage' || f === 'location') {
+        if (b[f] === oldName) b[f] = newName ?? undefined;
       } else {
         const arr = b[f];
         if (arr.includes(oldName)) {
@@ -64,6 +64,7 @@ export async function createBook(data: NewBook) {
   await ensureListItems('genre', book.genres);
   await ensureListItems('tag', book.tags);
   await ensureListItems('language', [book.readingLanguage]);
+  await ensureListItems('location', [book.location]);
   if (book.status !== 'quero_ler') {
     const s = book.status;
     book.status = 'quero_ler';
@@ -77,6 +78,7 @@ export async function updateBook(id: string, changes: Partial<Book>) {
   if (changes.genres) await ensureListItems('genre', changes.genres);
   if (changes.tags) await ensureListItems('tag', changes.tags);
   if (changes.readingLanguage) await ensureListItems('language', [changes.readingLanguage]);
+  if (changes.location) await ensureListItems('location', [changes.location]);
 }
 
 export async function openReading(bookId: string): Promise<Reading | undefined> {

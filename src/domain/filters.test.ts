@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Book } from '../db';
 import type { BookMeta } from '../data/hooks';
-import { applyFilters, groupToFilter, matches, sortBooks } from './filters';
+import { applyFilters, groupToFilter, groupValues, matches, sortBooks } from './filters';
 
 const b = (id: string, over: Partial<Book>): Book => ({
   id, title: id, authors: [], status: 'lido', favorite: false, rating: 0, genres: [], tags: [], createdAt: id, updatedAt: '', ...over,
@@ -35,5 +35,22 @@ describe('filtros combináveis', () => {
   });
   it('busca ignora acentos e maiúsculas', () => {
     expect(matches('Ficção Científica', 'ficcao')).toBe(true);
+  });
+});
+
+describe('localização', () => {
+  const bs = [
+    b('v', { location: 'Vitória' }),
+    b('s', { location: 'São Paulo' }),
+    b('e', { location: 'Vitória' }),
+    b('n', {}),
+  ];
+  const m = new Map<string, BookMeta>([['e', { pct: 0, page: 0, years: [], loanTo: 'Fulana' }]]);
+  it('agrupa por local e mostra empréstimos em aberto', () => {
+    expect(bs.map((x) => groupValues(x, m.get(x.id), 'local')[0])).toEqual(['Vitória', 'São Paulo', 'Emprestado para Fulana', 'Sem local definido']);
+  });
+  it('filtra por local (livro emprestado sai de Vitória)', () => {
+    expect(applyFilters(bs, m, groupToFilter('local', 'Vitória')).map((x) => x.id)).toEqual(['v']);
+    expect(applyFilters(bs, m, groupToFilter('local', 'Emprestado para Fulana')).map((x) => x.id)).toEqual(['e']);
   });
 });

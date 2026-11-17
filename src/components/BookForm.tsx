@@ -82,6 +82,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
   const seriesNames = [...new Set((useLiveQuery(() => db.books.toArray(), []) ?? []).map((b) => b.series).filter(Boolean) as string[])].sort();
   const languages = useList('language');
   const tags = useList('tag');
+  const locations = useList('location');
   const set = (p: Partial<BookDraft>) => setD((x) => ({ ...x, ...p }));
 
   const submit = async (e: React.FormEvent) => {
@@ -162,6 +163,21 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           <option value="__novo">+ Adicionar idioma…</option>
         </select>
       </label>
+      <label className="field"><span>📍 Onde o livro está</span>
+        <select value={d.location ?? ''} onChange={async (e) => {
+          let v = e.target.value;
+          if (v === '__novo') {
+            v = prompt('Nome do local (ex.: Vitória, São Paulo, casa da mãe):')?.trim() ?? '';
+            if (v) await ensureListItems('location', [v]);
+          }
+          set({ location: v || undefined });
+        }}>
+          <option value="">—</option>
+          {[...new Set([...locations, ...(d.location ? [d.location] : [])])].map((l) => <option key={l}>{l}</option>)}
+          <option value="__novo">+ Adicionar local…</option>
+        </select>
+      </label>
+      <p className="small muted" style={{ marginTop: -6 }}>Livros emprestados aparecem como “Emprestado para …” automaticamente (registre em Emprestar).</p>
       <div className="grid2">
         <label className="field"><span>Formato</span>
           <select value={d.format ?? ''} onChange={(e) => set({ format: (e.target.value || undefined) as Format | undefined })}>

@@ -85,6 +85,7 @@ export default function Settings() {
       <ListManager kind="genre" title="Gêneros" />
       <ListManager kind="language" title="Idiomas" />
       <ListManager kind="tag" title="Tags" />
+      <ListManager kind="location" title="Locais (onde ficam os livros)" />
 
       <div className="card small">
         <h3>Sobre</h3>

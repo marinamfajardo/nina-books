@@ -9,7 +9,7 @@ import { GROUP_LABEL, matches, type GroupKey } from '../domain/filters';
 import { lastBackupDate } from '../services/backup';
 import { PillCard, QuoteOfDayCard } from './Inspiration';
 
-const GROUPS: GroupKey[] = ['genero', 'serie', 'idioma', 'status', 'autor', 'ano', 'tag', 'formato'];
+const GROUPS: GroupKey[] = ['genero', 'serie', 'local', 'idioma', 'status', 'autor', 'ano', 'tag', 'formato'];
 
 function SearchResults({ q }: { q: string }) {
   const lib = useLibrary();

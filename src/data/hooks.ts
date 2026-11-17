@@ -10,6 +10,8 @@ export interface BookMeta {
   years: string[];
   finishedAt?: string;
   startedAt?: string;
+  /** Pessoa com quem o livro está emprestado agora */
+  loanTo?: string;
 }
 
 export interface Library {
@@ -25,11 +27,13 @@ export function useLibrary(): Library {
   const books = useLiveQuery(() => db.books.toArray(), []);
   const readings = useLiveQuery(() => db.readings.toArray(), []);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
+  const loans = useLiveQuery(() => db.loans.filter((l) => !l.returnedAt).toArray(), []);
   return useMemo(() => {
     const b = books ?? [];
     const r = readings ?? [];
     const s = sessions ?? [];
     const meta = new Map<string, BookMeta>();
+    const openLoans = new Map((loans ?? []).map((l) => [l.bookId, l.person]));
     const byBookSessions = new Map<string, Session[]>();
     for (const x of s) {
       if (!byBookSessions.has(x.bookId)) byBookSessions.set(x.bookId, []);
@@ -55,6 +59,7 @@ export function useLibrary(): Library {
         years: [...years].sort().reverse(),
         finishedAt: finished[finished.length - 1],
         startedAt: rs[0]?.startedAt,
+        loanTo: openLoans.get(book.id),
       });
     }
     return {
@@ -63,7 +68,7 @@ export function useLibrary(): Library {
       meta,
       loaded: books !== undefined && readings !== undefined && sessions !== undefined,
     };
-  }, [books, readings, sessions]);
+  }, [books, readings, sessions, loans]);
 }
 
 export function useList(kind: ListKind) {

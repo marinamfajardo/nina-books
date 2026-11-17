@@ -112,6 +112,7 @@ export default function BookDetail() {
               <div><span className="muted">Idioma original</span><br /><b>{book.originalLanguage ?? '—'}</b></div>
               <div><span className="muted">Formato</span><br /><b>{book.format ? FORMAT_LABEL[book.format] : '—'}</b></div>
               <div><span className="muted">Exemplar</span><br /><b>{book.ownership ? OWNERSHIP_LABEL[book.ownership] : '—'}</b></div>
+              <div><span className="muted">📍 Onde está</span><br /><b>{loan ? `Emprestado para ${loan.person}` : book.location ?? '—'}</b></div>
               {last && <div><span className="muted">Início</span><br /><b>{fmtDate(last.startedAt)}</b></div>}
               {last?.finishedAt && <div><span className="muted">{last.outcome === 'abandonada' ? 'Desisti em' : 'Conclusão'}</span><br /><b>{fmtDate(last.finishedAt)}</b></div>}
             </div>
