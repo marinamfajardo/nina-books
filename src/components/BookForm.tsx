@@ -112,11 +112,8 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           ) : (
             <Cover book={{ title: d.title || 'Sem título', authors: authors.split(','), coverId: d.coverId, coverUrl: d.coverUrl, favorite: false }} />
           )}
-          <CaptureButton accept="image/*" className="ghost small" onFile={async (f) => setNewPhoto(await shrinkImage(f, 1600))}>
-            📷 {d.coverBlob || d.coverId || d.coverUrl ? 'Nova foto' : 'Capa'}
-          </CaptureButton>
           <CaptureButton accept="image/*" capture={false} className="ghost small" onFile={async (f) => setNewPhoto(await shrinkImage(f, 1600))}>
-            🖼️ Da galeria
+            🖼️ {d.coverBlob || d.coverId || d.coverUrl ? 'Trocar capa' : 'Capa'}
           </CaptureButton>
         </div>
         <div className="grow stack">

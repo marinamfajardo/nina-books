@@ -79,7 +79,6 @@ export default function BookDetail() {
         <div>
           <Cover book={book} showFav={false} />
           <div className="row" style={{ justifyContent: 'center', gap: 0, marginTop: 4 }}>
-            <CaptureButton accept="image/*" className="ghost small" onFile={async (f) => setCoverPhoto(await shrinkImage(f, 1600))}>📷</CaptureButton>
             <CaptureButton accept="image/*" capture={false} className="ghost small" onFile={async (f) => setCoverPhoto(await shrinkImage(f, 1600))}>🖼️ Trocar capa</CaptureButton>
           </div>
         </div>
