@@ -11,7 +11,7 @@ export default function Favorites() {
   const sections = ratingSections(favs);
   return (
     <div>
-      <PageTitle back>❤️ Favoritos</PageTitle>
+      <PageTitle back>Favoritos</PageTitle>
       <p className="small muted" style={{ marginTop: -6 }}>Os livros que você marcou com ❤️ e todos os que receberam 5 estrelas ou mais.</p>
       {lib.loaded && !favs.length && (
         <div className="empty"><div className="big">❤️</div>Nenhum favorito ainda. Toque no ♡ de um livro ou dê 5 estrelas para ele aparecer aqui.</div>
