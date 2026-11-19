@@ -31,3 +31,6 @@ export function ratingSections<T extends { rating: number; title: string }>(item
   if (by.has(0)) keys.push(0);
   return keys.map((k) => ({ rating: k, title: ratingTitle(k), items: by.get(k)!.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR')) }));
 }
+
+/** Favorito: marcado com ❤️ ou com nota de 5 estrelas ou mais. */
+export const isFavoriteBook = (b: { favorite: boolean; rating: number }) => b.favorite || b.rating >= NORMAL_MAX;

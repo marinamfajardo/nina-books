@@ -130,7 +130,7 @@ export function BookBrowser({ base = {}, hide = [], queueLink = false }: { base?
       {open && (
         <Modal title="Filtros e ordem" onClose={() => setOpen(false)}>
           <div className="stack">
-            <label className="row"><input type="checkbox" checked={!!filters.favorite} onChange={(e) => set({ favorite: e.target.checked || undefined })} /> Só favoritos ♥</label>
+            <label className="row"><input type="checkbox" checked={!!filters.favorite} onChange={(e) => set({ favorite: e.target.checked || undefined })} /> Só favoritos ♥ (e 5★ ou mais)</label>
             {!hide.includes('language') && (
               <label className="field"><span>Idioma de leitura</span>
                 <select value={filters.language ?? ''} onChange={(e) => set({ language: e.target.value || undefined })}>

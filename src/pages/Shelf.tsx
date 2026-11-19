@@ -129,6 +129,7 @@ export default function Shelf() {
             <PillCard />
           </div>
           <div className="chips scroll" style={{ marginBottom: 10 }}>
+            <Link to="/favoritos" className="chip" style={{ textDecoration: 'none' }}>❤️ Favoritos</Link>
             <span className="small muted" style={{ alignSelf: 'center', whiteSpace: 'nowrap' }}>Agrupar:</span>
             {GROUPS.map((g) => <Link key={g} to={`/grupos/${g}`} className="chip" style={{ textDecoration: 'none' }}>{GROUP_LABEL[g]}</Link>)}
             <Link to="/citacoes" className="chip" style={{ textDecoration: 'none' }}>❝ Citações</Link>

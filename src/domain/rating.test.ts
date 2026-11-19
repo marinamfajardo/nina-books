@@ -24,3 +24,14 @@ describe('avaliação estendida', () => {
     expect(s[1].items.map((x) => x.title)).toEqual(['A', 'F']);
   });
 });
+
+describe('favoritos', () => {
+  it('entram os marcados com ❤️ e os de 5 estrelas ou mais', async () => {
+    const { isFavoriteBook } = await import('./rating');
+    expect(isFavoriteBook({ favorite: true, rating: 4 })).toBe(true);
+    expect(isFavoriteBook({ favorite: false, rating: 10 })).toBe(true);
+    expect(isFavoriteBook({ favorite: false, rating: 12 })).toBe(true);
+    expect(isFavoriteBook({ favorite: false, rating: 9 })).toBe(false);
+    expect(isFavoriteBook({ favorite: false, rating: -2 })).toBe(false);
+  });
+});

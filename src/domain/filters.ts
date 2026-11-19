@@ -1,5 +1,6 @@
 import type { Book, Format, Status } from '../db';
 import type { BookMeta } from '../data/hooks';
+import { isFavoriteBook } from './rating';
 
 export type GroupKey = 'genero' | 'idioma' | 'status' | 'autor' | 'ano' | 'tag' | 'formato' | 'serie' | 'local';
 
@@ -62,7 +63,7 @@ export const groupToFilter = (by: GroupKey, value: string): Filters => {
 export function applyFilters(books: Book[], meta: Map<string, BookMeta>, f: Filters) {
   return books.filter((b) => {
     if (f.status && b.status !== f.status) return false;
-    if (f.favorite && !b.favorite) return false;
+    if (f.favorite && !isFavoriteBook(b)) return false;
     if (f.language && b.readingLanguage !== f.language) return false;
     if (f.minRating && b.rating < f.minRating) return false;
     if (f.format && b.format !== f.format) return false;

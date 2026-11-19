@@ -15,6 +15,7 @@ import Achievements, { MedalCelebration } from './pages/Achievements';
 import Retrospective from './pages/Retrospective';
 import Inspiration, { AllQuotes } from './pages/Inspiration';
 import Notes from './pages/Notes';
+import Favorites from './pages/Favorites';
 import Ranking, { AuthorList, AuthorPage } from './pages/Ranking';
 import { SyncStatusBadge } from './pages/SyncSettings';
 import { useAutoSync } from './sync/useSync';
@@ -57,6 +58,7 @@ function Shell() {
           <Route path="/inspiracao" element={<Inspiration />} />
           <Route path="/citacoes" element={<AllQuotes />} />
           <Route path="/notas" element={<Notes />} />
+          <Route path="/favoritos" element={<Favorites />} />
           <Route path="/retrospectiva/:year" element={<Retrospective />} />
           <Route path="/autores" element={<AuthorList />} />
           <Route path="/autor/:name" element={<AuthorPage />} />
