@@ -8,6 +8,7 @@ import { useLibrary } from '../data/hooks';
 import { formatNumber, goalProgress, today } from '../domain/stats';
 import { downloadCover, searchBooks } from '../services/bookLookup';
 import { saveMedia } from '../data/actions';
+import { Roulette } from '../components/Roulette';
 import { redeemVoucher } from './Achievements';
 
 // ---------- Metas ----------
@@ -68,31 +69,35 @@ export function Goals() {
 const PRIORITY = { 1: 'Alta', 2: 'Média', 3: 'Baixa' } as Record<number, string>;
 export function WantToRead() {
   const lib = useLibrary();
+  const [params, setParams] = useSearchParams();
+  const tab = params.get('aba') === 'roleta' ? 'roleta' : 'fila';
+  // sempre em fila: prioridade (alta → baixa) e, dentro dela, quem entrou primeiro
   const list = lib.books.filter((b) => b.status === 'quero_ler').sort((a, b) => (a.wantPriority ?? 2) - (b.wantPriority ?? 2) || a.createdAt.localeCompare(b.createdAt));
   return (
     <div>
       <PageTitle back>Quero ler</PageTitle>
-      {lib.loaded && !list.length && <div className="empty">Nenhum livro na fila.</div>}
-      {[1, 2, 3].map((p) => {
-        const items = list.filter((b) => (b.wantPriority ?? 2) === p);
-        if (!items.length) return null;
-        return (
-          <div className="card" key={p}>
-            <h3>Prioridade {PRIORITY[p].toLowerCase()}</h3>
-            {items.map((b) => (
-              <div key={b.id} className="list-item">
-                <Link to={`/livro/${b.id}`} style={{ width: 52, flex: 'none' }}><Cover book={b} /></Link>
-                <Link to={`/livro/${b.id}`} className="grow" style={{ color: 'inherit', textDecoration: 'none' }}>
-                  <b>{b.title}</b><div className="small muted">{b.authors.join(', ')}{b.pageCount ? ` · ${b.pageCount} p.` : ''}</div>
-                </Link>
-                <select value={b.wantPriority ?? 2} onChange={(e) => updateBook(b.id, { wantPriority: Number(e.target.value) })} style={{ width: 'auto' }}>
-                  <option value={1}>Alta</option><option value={2}>Média</option><option value={3}>Baixa</option>
-                </select>
-              </div>
-            ))}
-          </div>
-        );
-      })}
+      <div className="tabs">
+        <button className={tab === 'fila' ? 'on' : ''} onClick={() => setParams({}, { replace: true })}>📋 Fila ({list.length})</button>
+        <button className={tab === 'roleta' ? 'on' : ''} onClick={() => setParams({ aba: 'roleta' }, { replace: true })}>🎡 Roleta</button>
+      </div>
+      {tab === 'roleta' ? <Roulette books={list} /> : (
+        <>
+          {lib.loaded && !list.length && <div className="empty"><div className="big">📋</div>Nenhum livro na fila. Marque livros como “Quero ler” para eles aparecerem aqui.</div>}
+          {list.map((b, i) => (
+            <div key={b.id} className="list-item">
+              <div style={{ width: 30, textAlign: 'center', fontFamily: 'var(--serif)', fontWeight: 700, color: 'var(--primary)' }}>{i + 1}º</div>
+              <Link to={`/livro/${b.id}`} style={{ width: 52, flex: 'none' }}><Cover book={b} /></Link>
+              <Link to={`/livro/${b.id}`} className="grow" style={{ color: 'inherit', textDecoration: 'none' }}>
+                <b>{b.title}</b><div className="small muted">{b.authors.join(', ')}{b.pageCount ? ` · ${b.pageCount} p.` : ''}</div>
+              </Link>
+              <select value={b.wantPriority ?? 2} onChange={(e) => updateBook(b.id, { wantPriority: Number(e.target.value) })} style={{ width: 'auto' }} aria-label="Prioridade">
+                <option value={1}>Alta</option><option value={2}>Média</option><option value={3}>Baixa</option>
+              </select>
+            </div>
+          ))}
+          {list.length > 0 && <p className="small muted mt">A ordem segue a prioridade (alta primeiro) e, dentro dela, quem entrou na fila antes.</p>}
+        </>
+      )}
     </div>
   );
 }

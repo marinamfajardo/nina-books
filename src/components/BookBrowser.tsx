@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import type { Book, Format, Status } from '../db';
 import { useLibrary, useList, type BookMeta } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL, STATUSES } from '../domain/constants';
@@ -57,7 +57,8 @@ export function BookList({ books, meta }: { books: Book[]; meta: Map<string, Boo
 }
 
 /** Estante com filtros combináveis, ordenação e alternância grade/lista. */
-export function BookBrowser({ base = {}, hide = [] }: { base?: Filters; hide?: (keyof Filters)[] }) {
+export function BookBrowser({ base = {}, hide = [], queueLink = false }: { base?: Filters; hide?: (keyof Filters)[]; queueLink?: boolean }) {
+  const navigate = useNavigate();
   const lib = useLibrary();
   const languages = useList('language');
   const [view, setView] = useState<'grade' | 'lista'>(() => loadPref(VIEW_KEY, 'grade'));
@@ -83,7 +84,8 @@ export function BookBrowser({ base = {}, hide = [] }: { base?: Filters; hide?: (
           options={STATUSES.filter(() => !hide.includes('status'))}
           labels={STATUS_LABEL}
           value={filters.status}
-          onChange={(status) => set({ status })}
+          // na estante, "Quero ler" abre a fila (com a roleta)
+          onChange={(status) => (queueLink && status === 'quero_ler' ? navigate('/quero-ler') : set({ status }))}
         />
       </div>
       <div className="row between nowrap" style={{ marginBottom: 12 }}>

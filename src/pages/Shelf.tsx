@@ -131,10 +131,9 @@ export default function Shelf() {
           <div className="chips scroll" style={{ marginBottom: 10 }}>
             <span className="small muted" style={{ alignSelf: 'center', whiteSpace: 'nowrap' }}>Agrupar:</span>
             {GROUPS.map((g) => <Link key={g} to={`/grupos/${g}`} className="chip" style={{ textDecoration: 'none' }}>{GROUP_LABEL[g]}</Link>)}
-            <Link to="/quero-ler" className="chip" style={{ textDecoration: 'none' }}>Fila "Quero ler"</Link>
             <Link to="/citacoes" className="chip" style={{ textDecoration: 'none' }}>❝ Citações</Link>
           </div>
-          <BookBrowser />
+          <BookBrowser queueLink />
         </>
       )}
     </div>

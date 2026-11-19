@@ -375,3 +375,8 @@ span.cal-d { width: 12px; height: 12px; min-width: 12px; }
 .country.l3 { fill: #c7354f; cursor: pointer; }
 .country.l4 { fill: #6d1a36; cursor: pointer; }
 .country.sel { stroke: var(--accent); stroke-width: 2; }
+
+/* ---------- Roleta ---------- */
+.wheel-wrap { position: relative; width: min(100%, 360px); margin: 8px auto 0; }
+.wheel { width: 100%; height: auto; display: block; border-radius: 50%; box-shadow: 0 6px 22px rgba(74, 14, 35, 0.35); }
+.wheel-pointer { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); z-index: 2; font-size: 2rem; color: var(--accent); text-shadow: 0 2px 4px rgba(0,0,0,.35); line-height: 1; }
