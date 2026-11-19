@@ -5,7 +5,7 @@ import { ExpirationPlugin } from 'workbox-expiration';
 import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
 import { CacheFirst } from 'workbox-strategies';
-import { FACTS, REMINDERS } from './domain/inspiration';
+import { CHALLENGES, FACTS, LITERATURE, QUESTIONS, REMINDERS, wikiUrl } from './domain/inspiration';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -77,8 +77,18 @@ async function morningNotification() {
 
 /** Noite: lembrete para largar o celular + um estudo sobre os benefícios da leitura. */
 function nightNotification() {
+  const title = pick(REMINDERS);
+  // alterna: estudo sobre leitura, tema de literatura, desafio ou pergunta
+  const kind = Math.floor(Math.random() * 4);
+  if (kind === 1) {
+    const t = pick(LITERATURE);
+    const text = t.text.length > 170 ? `${t.text.slice(0, 167)}…` : t.text;
+    return { title, body: `📚 ${t.title}: ${text}`, url: wikiUrl(t.search) };
+  }
+  if (kind === 2) return { title, body: `🎯 Desafio: ${pick(CHALLENGES)}`, url: `${BASE}#/` };
+  if (kind === 3) return { title, body: `💭 ${pick(QUESTIONS)}`, url: `${BASE}#/notas` };
   const f = pick(FACTS);
-  return { title: pick(REMINDERS), body: `${f.short} (${f.source.match(/^[^)]*\)/)?.[0] ?? f.source})`, url: `${BASE}#/inspiracao` };
+  return { title, body: `🧠 ${f.short} (${f.source.match(/^[^)]*\)/)?.[0] ?? f.source})`, url: f.url };
 }
 
 self.addEventListener('push', (event) => {
@@ -102,6 +112,8 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = (event.notification.data as { url?: string })?.url ?? BASE;
   event.waitUntil((async () => {
+    // link de fora (estudo, Wikipédia): abre no navegador
+    if (!url.startsWith(BASE)) return self.clients.openWindow(url);
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const w = wins[0] as WindowClient | undefined;
     if (w) {

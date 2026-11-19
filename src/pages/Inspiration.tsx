@@ -6,7 +6,7 @@ import { fmtDate, Modal, PageTitle, useToast } from '../components/ui';
 import { db, nowIso, uid, type Quote } from '../db';
 import { useLibrary } from '../data/hooks';
 import { matches } from '../domain/filters';
-import { CHALLENGES, FACTS, LITERATURE, pillOfDay, QUESTIONS, wikiUrl, type Pill, type StudyWord } from '../domain/inspiration';
+import { CHALLENGES, FACTS, LITERATURE, QUESTIONS, wikiUrl, type Pill, type StudyWord } from '../domain/inspiration';
 
 function WordPill({ word }: { word: StudyWord }) {
   const [show, setShow] = useState(false);
@@ -56,7 +56,7 @@ function PillBody({ pill }: { pill: Pill }) {
   return <><div className="pill-kind">💭 Pergunta para pensar</div><p style={{ margin: '4px 0', fontFamily: 'var(--serif)', fontSize: '1.1rem' }}>{pill.text}</p></>;
 }
 
-/** Cartão diário na estante: curiosidade, desafio ou pergunta. */
+/** Cartão na estante: uma palavra do glossário para revisar. */
 export function PillCard() {
   const [offset, setOffset] = useState(0);
   const lib = useLibrary();
@@ -65,13 +65,16 @@ export function PillCard() {
     .filter((g) => g.meaning)
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((g) => ({ word: g.word, meaning: g.meaning, language: g.language, example: g.example, bookTitle: g.bookId ? lib.bookMap.get(g.bookId)?.title : undefined }));
-  const pill = pillOfDay(new Date(), offset, words);
+  // na estante ficam só as palavras do glossário (o resto vai nas notificações)
+  if (!words.length) return null;
+  const day = Math.floor(Date.now() / 86_400_000);
+  const word = words[(((day + offset) % words.length) + words.length) % words.length];
   return (
     <div className="card pill-card">
-      <PillBody pill={pill} />
+      <PillBody pill={{ kind: 'palavra', word }} />
       <div className="row between mt" style={{ marginTop: 8 }}>
-        <Link to="/inspiracao" className="small">ver todas</Link>
-        <button className="ghost small" onClick={() => setOffset((o) => o + 1)}>outra ›</button>
+        <Link to="/glossario" className="small">ver glossário</Link>
+        {words.length > 1 && <button className="ghost small" onClick={() => setOffset((o) => o + 1)}>outra palavra ›</button>}
       </div>
     </div>
   );
