@@ -7,7 +7,7 @@ import type { Book } from '../db';
 import { SessionForm } from './book/ReadingTab';
 import { db } from '../db';
 import { useLibrary } from '../data/hooks';
-import { GROUP_LABEL, matches, type GroupKey } from '../domain/filters';
+import { GROUP_LABEL, matches, normalize, seriesBooks, type GroupKey } from '../domain/filters';
 import { lastBackupDate } from '../services/backup';
 import { PillCard, QuoteOfDayCard } from './Inspiration';
 
@@ -20,20 +20,38 @@ function SearchResults({ q }: { q: string }) {
   const photos = useLiveQuery(() => db.photos.toArray(), []) ?? [];
   const words = useLiveQuery(() => db.glossary.toArray(), []) ?? [];
 
+  // compara sem acentos, maiúsculas, espaços e hífens ("off campus" acha "Off-Campus")
+  const loose = (t?: string) => (t ? normalize(t).replace(/[^a-z0-9]/g, '') : '');
+  const lq = loose(q);
+  const hit = (t?: string) => matches(t, q) || (lq.length >= 3 && loose(t).includes(lq));
   const books = useMemo(
-    () => lib.books.filter((b) => matches(b.title, q) || matches(b.subtitle, q) || b.authors.some((a) => matches(a, q)) || matches(b.isbn, q)),
+    () => lib.books
+      .filter((b) => hit(b.title) || hit(b.subtitle) || b.authors.some((a) => hit(a)) || matches(b.isbn, q) || hit(b.series))
+      .sort((a, b) => (a.series ?? '').localeCompare(b.series ?? '', 'pt-BR') || (a.seriesNumber ?? 999) - (b.seriesNumber ?? 999) || a.title.localeCompare(b.title, 'pt-BR')),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [lib.books, q],
   );
+  const sagas = [...new Set(lib.books.map((b) => b.series).filter((s): s is string => !!s && hit(s)))];
   const title = (id?: string) => (id ? lib.bookMap.get(id)?.title : undefined);
   const fq = quotes.filter((x) => matches(x.text, q) || matches(x.comment, q));
   const fn = notes.filter((x) => matches(x.text, q) || matches(x.title, q));
   const fp = photos.filter((x) => matches(x.ocrText, q) || matches(x.caption, q));
   const fw = words.filter((x) => matches(x.word, q) || matches(x.meaning, q) || matches(x.example, q));
-  const none = !books.length && !fq.length && !fn.length && !fp.length && !fw.length;
+  const none = !books.length && !sagas.length && !fq.length && !fn.length && !fp.length && !fw.length;
 
   return (
     <div>
       {none && <div className="empty"><div className="big">🔎</div>Nada encontrado para “{q}”.</div>}
+      {sagas.map((sg) => {
+        const vols = seriesBooks(lib.books, sg);
+        const read = vols.filter((b) => b.status === 'lido' || b.status === 'relendo').length;
+        return (
+          <Link key={sg} to={`/grupo/serie/${encodeURIComponent(sg)}`} className="group-tile" style={{ marginBottom: 12 }}>
+            <span><b>📚 Saga {sg}</b><br /><span className="small muted">{vols.length} livro(s) · {read} lido(s)</span></span>
+            <span className="muted">ver todos ›</span>
+          </Link>
+        );
+      })}
       {books.length > 0 && <div className="card"><h3>Livros</h3><BookList books={books} meta={lib.meta} /></div>}
       {fq.length > 0 && (
         <div className="card"><h3>Citações</h3>
