@@ -31,3 +31,19 @@ describe('rodadas de revisão', () => {
     for (let i = 0; i < 30; i++) expect(newRound(words, 'c')[0].id).not.toBe('c');
   });
 });
+
+describe('prioridade das erradas', () => {
+  it('erradas primeiro, depois nunca revisadas, depois acertadas', async () => {
+    const { newRound } = await import('./flashcards');
+    const words = [
+      { id: 'ok1', lastCorrect: true }, { id: 'err1', lastCorrect: false }, { id: 'novo', lastCorrect: undefined },
+      { id: 'ok2', lastCorrect: true }, { id: 'err2', lastCorrect: false },
+    ];
+    for (let i = 0; i < 20; i++) {
+      const r = newRound(words).map((w) => w.id);
+      expect(r.slice(0, 2).sort()).toEqual(['err1', 'err2']);
+      expect(r[2]).toBe('novo');
+      expect(r.slice(3).sort()).toEqual(['ok1', 'ok2']);
+    }
+  });
+});

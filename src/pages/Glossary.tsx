@@ -114,7 +114,8 @@ function Flashcards({ entries, onClose }: { entries: GlossaryEntry[]; onClose: (
 
   const answer = async (correct: boolean) => {
     if (!card) return;
-    await db.glossary.update(card.id, review(card.box, correct));
+    await db.glossary.update(card.id, { ...review(card.box, correct), lastCorrect: correct });
+    card.lastCorrect = correct;
     setScore((sc) => (correct ? { ...sc, ok: sc.ok + 1 } : { ...sc, no: sc.no + 1 }));
     setFlipped(false);
     if (i + 1 >= deck.length) setDone(true);
@@ -122,7 +123,8 @@ function Flashcards({ entries, onClose }: { entries: GlossaryEntry[]; onClose: (
   };
 
   const nextRound = () => {
-    setDeck(newRound(entries, card?.id));
+    // usa as respostas desta rodada: as erradas vêm primeiro
+    setDeck(newRound(deck, card?.id));
     setRound((r) => r + 1);
     setI(0);
     setScore({ ok: 0, no: 0 });

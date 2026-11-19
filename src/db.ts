@@ -122,6 +122,8 @@ export interface GlossaryEntry {
   bookId?: string;
   box: number;
   nextReview: string; // AAAA-MM-DD
+  /** Última resposta na revisão: true = acertou, false = errou */
+  lastCorrect?: boolean;
   createdAt: string;
 }
 
