@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Book } from '../db';
 import { changeStatus } from '../data/actions';
-import { sliceAngle, spinTarget } from '../domain/wheel';
+import { sliceAngle, spinTarget, wheelEntries } from '../domain/wheel';
 import { Cover, Modal, useToast } from './ui';
 
 const COLORS = ['#6d1a36', '#d98897', '#b3263e', '#f6dde3', '#8e2443', '#e8a3b1'];
@@ -23,7 +23,10 @@ function slicePath(a: number, b: number) {
 
 const short = (t: string, max: number) => (t.length > max ? `${t.slice(0, max - 1)}…` : t);
 
-/** Roleta para sortear o próximo livro da fila "Quero ler". */
+/**
+ * Roleta para sortear o próximo livro da fila "Quero ler".
+ * Recebe todos os livros: sagas entram uma vez, com o próximo volume não lido.
+ */
 export function Roulette({ books }: { books: Book[] }) {
   const [onlyHigh, setOnlyHigh] = useState(false);
   const [rotation, setRotation] = useState(0);
@@ -33,12 +36,14 @@ export function Roulette({ books }: { books: Book[] }) {
   const nav = useNavigate();
   const toast = useToast();
 
-  const highCount = books.filter((b) => (b.wantPriority ?? 2) === 1).length;
-  const list = onlyHigh && highCount > 0 ? books.filter((b) => (b.wantPriority ?? 2) === 1) : books;
+  const all = wheelEntries(books);
+  const highCount = all.filter((e) => (e.book.wantPriority ?? 2) === 1).length;
+  const entries = onlyHigh && highCount > 0 ? all.filter((e) => (e.book.wantPriority ?? 2) === 1) : all;
+  const list = entries.map((e) => e.book);
   const n = list.length;
   const seg = sliceAngle(n);
 
-  if (!books.length) {
+  if (!all.length) {
     return <div className="empty"><div className="big">🎡</div>Adicione livros com o status “Quero ler” para girar a roleta.</div>;
   }
 
@@ -53,7 +58,7 @@ export function Roulette({ books }: { books: Book[] }) {
 
   return (
     <div className="stack center">
-      {highCount > 0 && highCount < books.length && (
+      {highCount > 0 && highCount < all.length && (
         <label className="row small" style={{ justifyContent: 'center' }}>
           <input type="checkbox" checked={onlyHigh} disabled={spinning} onChange={(e) => setOnlyHigh(e.target.checked)} /> Só prioridade alta ({highCount})
         </label>
@@ -83,13 +88,13 @@ export function Roulette({ books }: { books: Book[] }) {
                   x={tx}
                   y={ty}
                   fill={light ? '#4a0e23' : '#fff'}
-                  fontSize={n > 16 ? 8 : n > 8 ? 10 : 12}
+                  fontSize={n > 28 ? 6.5 : n > 16 ? 8 : n > 8 ? 10 : 12}
                   fontWeight={700}
                   textAnchor="middle"
                   dominantBaseline="middle"
                   transform={`rotate(${mid + (mid > 180 ? 90 : -90)} ${tx} ${ty})`}
                 >
-                  {n > 24 ? i + 1 : short(b.title, n > 12 ? 14 : 20)}
+                  {short(entries[i].label, n > 28 ? 12 : n > 12 ? 15 : 20)}
                 </text>
               </g>
             );
@@ -99,7 +104,7 @@ export function Roulette({ books }: { books: Book[] }) {
         </svg>
       </div>
       <button className="block" onClick={spin} disabled={spinning || !n}>{spinning ? 'Girando…' : '🎡 Girar a roleta'}</button>
-      <p className="small muted" style={{ margin: 0 }}>{n} livro(s) na roleta</p>
+      <p className="small muted" style={{ margin: 0 }}>{n} opção(ões) na roleta · cada saga entra só com o próximo volume que você ainda não leu</p>
 
       {winner && (
         <Modal title="O próximo livro é…" onClose={() => setWinner(null)}>
@@ -107,6 +112,7 @@ export function Roulette({ books }: { books: Book[] }) {
             <div className="confetti" aria-hidden>🎉📚✨</div>
             <div style={{ width: 140, margin: '0 auto' }}><Cover book={winner} /></div>
             <h2 style={{ margin: 0 }}>{winner.title}</h2>
+            {winner.series && <div className="small">📚 {winner.series}{winner.seriesNumber ? ` · volume ${winner.seriesNumber}` : ''}</div>}
             <div className="muted">{winner.authors.join(', ')}</div>
             <button className="block" onClick={async () => {
               await changeStatus(winner.id, 'lendo');

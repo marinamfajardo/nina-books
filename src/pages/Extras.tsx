@@ -80,7 +80,7 @@ export function WantToRead() {
         <button className={tab === 'fila' ? 'on' : ''} onClick={() => setParams({}, { replace: true })}>📋 Fila ({list.length})</button>
         <button className={tab === 'roleta' ? 'on' : ''} onClick={() => setParams({ aba: 'roleta' }, { replace: true })}>🎡 Roleta</button>
       </div>
-      {tab === 'roleta' ? <Roulette books={list} /> : (
+      {tab === 'roleta' ? <Roulette books={lib.books} /> : (
         <>
           {lib.loaded && !list.length && <div className="empty"><div className="big">📋</div>Nenhum livro na fila. Marque livros como “Quero ler” para eles aparecerem aqui.</div>}
           {list.map((b, i) => (

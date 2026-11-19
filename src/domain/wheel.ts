@@ -18,3 +18,35 @@ export function sliceAtTop(rotation: number, n: number) {
   const a = (((360 - (rotation % 360)) % 360) + 360) % 360;
   return Math.floor(a / seg) % n;
 }
+
+interface WheelBook { id: string; title: string; status: string; series?: string; seriesNumber?: number; wantPriority?: number }
+export interface WheelEntry<B> { book: B; label: string; series?: string }
+
+const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+/**
+ * O que entra na roleta: livros avulsos da fila "Quero ler" e, de cada saga,
+ * só o próximo volume ainda não lido (se ele estiver na fila).
+ * Se algum volume da saga está sendo lido agora, a saga fica de fora.
+ */
+export function wheelEntries<B extends WheelBook>(allBooks: B[]): WheelEntry<B>[] {
+  const entries: WheelEntry<B>[] = [];
+  const series = new Map<string, B[]>();
+  for (const b of allBooks) {
+    if (b.series?.trim()) {
+      const k = norm(b.series);
+      if (!series.has(k)) series.set(k, []);
+      series.get(k)!.push(b);
+    } else if (b.status === 'quero_ler') {
+      entries.push({ book: b, label: b.title });
+    }
+  }
+  for (const vols of series.values()) {
+    if (vols.some((b) => b.status === 'lendo' || b.status === 'relendo')) continue;
+    const ordered = [...vols].sort((a, b) => (a.seriesNumber ?? 999) - (b.seriesNumber ?? 999) || a.title.localeCompare(b.title, 'pt-BR'));
+    const next = ordered.find((b) => b.status !== 'lido' && b.status !== 'desisti');
+    if (!next || next.status !== 'quero_ler') continue;
+    entries.push({ book: next, series: next.series, label: `${next.series}${next.seriesNumber ? ` ${next.seriesNumber}` : ''}` });
+  }
+  return entries;
+}
