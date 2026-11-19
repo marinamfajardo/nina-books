@@ -1,5 +1,6 @@
 import type { Book, Reading, Session } from '../db';
 import { daysBetween, sessionPages, sessionWords } from './stats';
+import { isRated } from './rating';
 
 const finishedIn = (readings: Reading[], bookId: string, year?: string) =>
   readings.filter((r) => r.bookId === bookId && r.outcome === 'concluida' && r.finishedAt && (!year || r.finishedAt.startsWith(year)));
@@ -90,7 +91,7 @@ export function authorStats(books: Book[], readings: Reading[], sessions: Sessio
     st.lastRead = dates[dates.length - 1];
     const spans = done.map((r) => daysBetween(r.startedAt, r.finishedAt!) + 1).filter((d) => d > 0);
     st.avgDaysToFinish = spans.length ? spans.reduce((a, b) => a + b, 0) / spans.length : undefined;
-    const rated = st.books.filter((b) => b.rating > 0);
+    const rated = st.books.filter((b) => isRated(b.rating));
     st.avgRating = rated.length ? rated.reduce((a, b) => a + b.rating, 0) / rated.length : 0;
     st.favorites = st.books.filter((b) => b.favorite).length;
     st.genres = tally(st.books.flatMap((b) => b.genres));
@@ -104,7 +105,7 @@ export type AuthorSort = 'livros' | 'paginas' | 'nota';
 export function rankAuthors(stats: AuthorStats[], by: AuthorSort) {
   const v = (s: AuthorStats) => (by === 'livros' ? s.booksRead : by === 'paginas' ? s.pages : s.avgRating);
   return stats
-    .filter((s) => (by === 'nota' ? s.avgRating > 0 : v(s) > 0))
+    .filter((s) => (by === 'nota' ? s.books.some((b) => isRated(b.rating)) : v(s) > 0))
     .sort((a, b) => v(b) - v(a) || b.booksRead - a.booksRead || b.pages - a.pages || a.name.localeCompare(b.name, 'pt-BR'));
 }
 

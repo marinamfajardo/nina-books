@@ -5,6 +5,7 @@ import { useLibrary, useList, type BookMeta } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL, STATUSES } from '../domain/constants';
 import { applyFilters, countActive, seriesBooks, SORT_LABEL, sortBooks, type Filters, type SortKey } from '../domain/filters';
 import { ChipSelect, Cover, Icon, Modal, Stars } from './ui';
+import { isRated, ratingSections } from '../domain/rating';
 
 const VIEW_KEY = 'nina.view';
 const SORT_KEY = 'nina.sort';
@@ -44,7 +45,7 @@ export function BookList({ books, meta }: { books: Book[]; meta: Map<string, Boo
               <div className="small muted ellipsis">{b.authors.join(', ')}{b.pageCount ? ` · ${b.pageCount} p.` : ''}</div>
               <div className="row" style={{ gap: 6, marginTop: 4 }}>
                 <span className="badge">{STATUS_LABEL[b.status]}</span>
-                {b.rating > 0 && <Stars value={b.rating} />}
+                {isRated(b.rating) && <Stars value={b.rating} />}
                 {b.feelings?.length ? <span>{b.feelings.slice(0, 4).join('')}</span> : null}
                 {m && m.pct > 0 && m.pct < 100 && <span className="small muted">{m.pct}%</span>}
               </div>
@@ -113,7 +114,18 @@ export function BookBrowser({ base = {}, hide = [], queueLink = false }: { base?
           ) : <p>Nenhum livro com esses filtros.</p>}
         </div>
       )}
-      {view === 'grade' ? <BookGrid books={shown} meta={lib.meta} /> : <BookList books={shown} meta={lib.meta} />}
+      {(base.status ?? filters.status) === 'lido' ? (
+        // livros lidos: agrupados pela nota, da maior para a menor
+        ratingSections(shown).map((sec) => (
+          <div key={sec.rating} className="rating-section">
+            <div className="row between rating-head">
+              <h3 style={{ margin: 0 }}>{sec.title}</h3>
+              {isRated(sec.rating) && <Stars value={sec.rating} />}
+            </div>
+            {view === 'grade' ? <BookGrid books={sec.items} meta={lib.meta} /> : <BookList books={sec.items} meta={lib.meta} />}
+          </div>
+        ))
+      ) : view === 'grade' ? <BookGrid books={shown} meta={lib.meta} /> : <BookList books={shown} meta={lib.meta} />}
 
       {open && (
         <Modal title="Filtros e ordem" onClose={() => setOpen(false)}>
@@ -197,7 +209,7 @@ export function SeriesStrip({ book, books }: { book: Book; books: Book[] }) {
             <Cover book={b} />
             <div className="small" style={{ fontWeight: 700, marginTop: 4 }}>{b.seriesNumber ? `Vol. ${b.seriesNumber}` : ''}</div>
             <div className="small ellipsis">{b.title}</div>
-            {b.rating > 0 ? <Stars value={b.rating} /> : <span className="small muted">{STATUS_LABEL[b.status]}</span>}
+            {isRated(b.rating) ? <Stars value={b.rating} /> : <span className="small muted">{STATUS_LABEL[b.status]}</span>}
           </Link>
         ))}
       </div>

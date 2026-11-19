@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { Book } from '../db';
 import { useMediaUrl } from '../services/media';
+import { NORMAL_MAX, ratingLabel } from '../domain/rating';
 
 // ---------- Ícones (traço fino) ----------
 const P = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
@@ -81,30 +82,62 @@ export function Cover({ book, pct, showFav = true }: { book: Pick<Book, 'title' 
   );
 }
 
-// ---------- Estrelas com meia estrela ----------
+// ---------- Estrelas com meia estrela (e notas negativas / acima de 5) ----------
 export function Stars({ value, onChange }: { value: number; onChange?: (v: number) => void }) {
+  const negative = value < 0;
+  const extra = value > NORMAL_MAX ? value - NORMAL_MAX : 0;
+  const base = negative ? 0 : Math.min(value, NORMAL_MAX);
+  const label = value === 0 ? 'Sem nota' : `Nota ${ratingLabel(value)} estrela(s)`;
+
+  if (!onChange) {
+    // só leitura
+    if (negative) return <span className="badge neg-rating" aria-label={label}>{ratingLabel(value)} ★</span>;
+    return (
+      <span className="stars ro" aria-label={label}>
+        {[1, 2, 3, 4, 5].map((i) => <button key={i} type="button" tabIndex={-1}>{base >= i * 2 ? '★' : base === i * 2 - 1 ? <HalfStar /> : '☆'}</button>)}
+        {extra > 0 && <span className="extra-stars">+{ratingLabel(extra)}✨</span>}
+      </span>
+    );
+  }
+
   return (
-    <div className={`stars${onChange ? '' : ' ro'}`} aria-label={`Nota ${value / 2} de 5`}>
-      {[1, 2, 3, 4, 5].map((i) => {
-        const full = value >= i * 2;
-        const half = !full && value === i * 2 - 1;
-        return (
-          <button
-            key={i}
-            type="button"
-            tabIndex={onChange ? 0 : -1}
-            onClick={(e) => {
-              if (!onChange) return;
-              const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-              const isLeft = e.clientX - rect.left < rect.width / 2;
-              const v = isLeft ? i * 2 - 1 : i * 2;
-              onChange(v === value ? 0 : v);
-            }}
-          >
-            {full ? '★' : half ? <HalfStar /> : '☆'}
-          </button>
-        );
-      })}
+    <div className="stack" style={{ gap: 4 }}>
+      <div className="stars" aria-label={label}>
+        {[1, 2, 3, 4, 5].map((i) => {
+          const full = base >= i * 2;
+          const half = !full && base === i * 2 - 1;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                const isLeft = e.clientX - rect.left < rect.width / 2;
+                const v = isLeft ? i * 2 - 1 : i * 2;
+                onChange(v === value ? 0 : v);
+              }}
+            >
+              {full ? '★' : half ? <HalfStar /> : '☆'}
+            </button>
+          );
+        })}
+        {extra > 0 && <span className="extra-stars">+{ratingLabel(extra)}✨</span>}
+        {negative && <span className="badge neg-rating" style={{ marginLeft: 6 }}>{ratingLabel(value)} ★</span>}
+      </div>
+      <div className="row rating-extra" style={{ gap: 4 }}>
+        <span className="small muted">Negativa:</span>
+        {[-1, -2].map((v) => (
+          <button key={v} type="button" className={`chip${value === v ? ' on' : ''}`} onClick={() => onChange(value === v ? 0 : v)}>{ratingLabel(v)}</button>
+        ))}
+        {value >= NORMAL_MAX && (
+          <>
+            <span className="small muted" style={{ marginLeft: 6 }}>Mais que 5:</span>
+            {[11, 12, 13, 14].map((v) => (
+              <button key={v} type="button" className={`chip${value === v ? ' on' : ''}`} onClick={() => onChange(value === v ? NORMAL_MAX : v)}>{ratingLabel(v)}</button>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -198,10 +198,11 @@ export const pagesPerHour = (sessions: Session[]) => {
   return timed.reduce((sum, s) => sum + sessionPages(s), 0) / (secs / 3600);
 };
 
+/** Quantos livros em cada nota (de −1 a 5 estrelas; notas acima de 5 só aparecem se usadas). */
 export const ratingDistribution = (books: Book[]) => {
-  const dist = Array.from({ length: 11 }, (_, i) => ({ rating: i / 2, count: 0 }));
-  for (const b of books) if (b.rating > 0) dist[Math.round(b.rating)].count++;
-  return dist.slice(1);
+  const used = new Set(books.map((b) => b.rating));
+  const keys = [-2, -1, ...Array.from({ length: 10 }, (_, i) => i + 1), 11, 12, 13, 14].filter((k) => k > 0 && k <= 10 || used.has(k));
+  return keys.map((k) => ({ rating: k / 2, key: k, count: books.filter((b) => b.rating === k).length }));
 };
 
 export const countBy = (books: Book[], by: 'genero' | 'idioma') => {

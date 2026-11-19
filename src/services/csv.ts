@@ -2,6 +2,7 @@ import Papa from 'papaparse';
 import type { Book, Status } from '../db';
 import { FORMAT_LABEL, STATUS_LABEL } from '../domain/constants';
 import { cleanIsbn } from './bookLookup';
+import { clampRating } from '../domain/rating';
 
 const COLUMNS = [
   'Título', 'Subtítulo', 'Autores', 'Editora', 'Ano', 'ISBN', 'Páginas', 'Status', 'Favorito', 'Nota',
@@ -104,7 +105,7 @@ export function parseCsv(text: string): CsvBookRow[] {
           pageCount: pages > 0 ? pages : undefined,
           status,
           favorite: /^(sim|yes|true|1|x)$/i.test(get(r, 'favorite') ?? ''),
-          rating: Math.max(0, Math.min(10, Math.round(ratingRaw * 2))),
+          rating: clampRating(ratingRaw * 2),
           genres: list(get(r, 'genres')),
           tags,
           readingLanguage: get(r, 'readingLanguage'),

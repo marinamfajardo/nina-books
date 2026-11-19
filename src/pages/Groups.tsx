@@ -1,11 +1,12 @@
 import { useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { BookBrowser } from '../components/BookBrowser';
 import { PageTitle } from '../components/ui';
 import { useLibrary } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL } from '../domain/constants';
 import { Cover, Stars } from '../components/ui';
 import { GROUP_LABEL, groupToFilter, groupValues, seriesBooks, type Filters, type GroupKey } from '../domain/filters';
+import { isRated } from '../domain/rating';
 
 const label = (by: GroupKey, v: string) =>
   by === 'status' ? STATUS_LABEL[v as keyof typeof STATUS_LABEL] : by === 'formato' ? FORMAT_LABEL[v as keyof typeof FORMAT_LABEL] : v;
@@ -30,7 +31,7 @@ export function GroupList() {
       {lib.loaded && !groups.length && <div className="empty">Nenhum livro classificado por {GROUP_LABEL[by].toLowerCase()} ainda.</div>}
       <div className="group-grid">
         {groups.map(([v, n]) => (
-          <Link key={v} to={`/grupo/${by}/${encodeURIComponent(v)}`} className="group-tile">
+          <Link key={v} to={by === 'status' && v === 'quero_ler' ? '/quero-ler' : `/grupo/${by}/${encodeURIComponent(v)}`} className="group-tile">
             <b>{label(by, v)}</b>
             <span className="badge">{n}</span>
           </Link>
@@ -45,6 +46,8 @@ export function GroupBooks() {
   const by = params.by as GroupKey;
   const value = decodeURIComponent(params.value ?? '');
   const base = useMemo(() => groupToFilter(by, value), [by, value]);
+  // status "Quero ler" é sempre a fila (com a roleta)
+  if (by === 'status' && value === 'quero_ler') return <Navigate to="/quero-ler" replace />;
   const hide: (keyof Filters)[] = by === 'status' ? ['status'] : by === 'idioma' ? ['language'] : by === 'ano' ? ['year'] : by === 'formato' ? ['format'] : [];
   return (
     <div>
@@ -68,7 +71,7 @@ function SeriesGrid({ name }: { name: string }) {
           <Link key={b.id} to={`/livro/${b.id}`} className="shelf-item">
             <Cover book={b} pct={lib.meta.get(b.id)?.pct} />
             <div className="t">{b.seriesNumber ? `${b.seriesNumber}. ` : ''}{b.title}</div>
-            {b.rating > 0 ? <Stars value={b.rating} /> : <div className="a">{STATUS_LABEL[b.status]}</div>}
+            {isRated(b.rating) ? <Stars value={b.rating} /> : <div className="a">{STATUS_LABEL[b.status]}</div>}
           </Link>
         ))}
       </div>

@@ -6,6 +6,7 @@ import { useLibrary } from '../data/hooks';
 import { STATUS_LABEL } from '../domain/constants';
 import { authorStats, rankAuthors, rankBooks, type AuthorSort } from '../domain/rankings';
 import { countBy, formatDuration, formatNumber } from '../domain/stats';
+import { isRated } from '../domain/rating';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 const tooltipStyle = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text)' };
@@ -62,7 +63,7 @@ export default function Ranking() {
                 <b>{x.book.title}</b>
                 <div className="small muted ellipsis">{x.book.authors.join(', ')}</div>
                 <div className="row" style={{ gap: 6 }}>
-                  {x.book.rating > 0 ? <Stars value={x.book.rating} /> : <span className="small muted">sem nota</span>}
+                  {isRated(x.book.rating) ? <Stars value={x.book.rating} /> : <span className="small muted">sem nota</span>}
                   {x.book.favorite && <span style={{ color: 'var(--accent)' }}>♥</span>}
                   {x.times > 1 && <span className="badge">lido {x.times}×</span>}
                 </div>
@@ -164,7 +165,7 @@ export function AuthorPage() {
             <div style={{ width: 48, flex: 'none' }}><Cover book={b} /></div>
             <div className="grow">
               <b>{b.title}</b>
-              <div className="row" style={{ gap: 6 }}><span className="badge">{STATUS_LABEL[b.status]}</span>{b.rating > 0 && <Stars value={b.rating} />}</div>
+              <div className="row" style={{ gap: 6 }}><span className="badge">{STATUS_LABEL[b.status]}</span>{isRated(b.rating) && <Stars value={b.rating} />}</div>
             </div>
           </Link>
         ))}

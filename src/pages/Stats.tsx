@@ -9,6 +9,7 @@ import { countFeelings } from '../domain/feelings';
 import { db, type Book, type Session } from '../db';
 import { useLibrary } from '../data/hooks';
 import { FORMAT_LABEL, STATUS_LABEL } from '../domain/constants';
+import { ratingLabel } from '../domain/rating';
 import {
   averagePagesPerDay, countBy, filterByRange, finishedByPeriod, formatDuration, formatNumber, goalProgress, pagesPerHour,
   ratingDistribution, streaks, timeByGenre, today, totals, totalsByGroup, totalsByPeriod, type GroupBy, type Period,
@@ -73,7 +74,7 @@ export default function Stats() {
   const finishedPeriod = finishedByPeriod(readings, year === 'todos' ? 'ano' : 'mes').map((x) => ({ ...x, label: fmtKey(x.key, year === 'todos' ? 'ano' : 'mes') }));
   const byGroup = totalsByGroup(sessions, lib.bookMap, by).slice(0, 10).map((x) => ({ ...x, label: groupLabel(by, x.key) }));
   const readBooks = lib.books.filter((b) => b.status === 'lido' || b.status === 'relendo');
-  const ratings = ratingDistribution(lib.books).map((x) => ({ ...x, label: `${x.rating}★` }));
+  const ratings = ratingDistribution(lib.books).map((x) => ({ ...x, label: `${ratingLabel(x.key)}★` }));
   const topGenres = countBy(readBooks, 'genero').slice(0, 8);
   const topLangs = countBy(readBooks, 'idioma').slice(0, 8);
 

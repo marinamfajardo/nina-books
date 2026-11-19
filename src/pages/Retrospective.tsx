@@ -5,6 +5,7 @@ import { useLibrary } from '../data/hooks';
 import { medals } from '../domain/achievements';
 import { authorStats, rankAuthors, rankBooks } from '../domain/rankings';
 import { countBy, filterByRange, formatDuration, formatNumber, totals, totalsByPeriod } from '../domain/stats';
+import { isRated, ratingSections } from '../domain/rating';
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
@@ -24,14 +25,8 @@ export default function Retrospective() {
     const topGenre = countBy(ranked.map((x) => x.book), 'genero').filter((g) => g.key !== 'Sem gênero')[0];
     const longest = [...ranked].sort((a, b) => (b.book.pageCount ?? 0) - (a.book.pageCount ?? 0))[0];
     const yearMedals = medals(lib.readings).earned.filter((m) => m.earnedAt?.startsWith(year));
-    // grupos de 5★ até ½★, e por último os sem nota
-    const groups: { label: string; rating: number; items: typeof ranked }[] = [];
-    for (let r = 10; r >= 1; r--) {
-      const items = ranked.filter((x) => x.book.rating === r);
-      if (items.length) groups.push({ label: `${(r / 2).toString().replace('.', ',')} estrela${r > 2 ? 's' : ''}`, rating: r, items });
-    }
-    const unrated = ranked.filter((x) => !x.book.rating);
-    if (unrated.length) groups.push({ label: 'Sem nota', rating: 0, items: unrated });
+    // grupos da maior nota para a menor (acima de 5, 5★… ½★, negativas) e por último os sem nota
+    const groups = ratingSections(ranked.map((x) => ({ ...x, rating: x.book.rating, title: x.book.title }))).map((g) => ({ label: g.title, rating: g.rating, items: g.items }));
     return { ranked, t, bestMonth, topAuthor, topGenre, longest, yearMedals, groups };
   }, [lib, year]);
 
@@ -71,7 +66,7 @@ export default function Retrospective() {
             <div key={g.label} className="card">
               <div className="row between">
                 <h3 style={{ margin: 0 }}>{g.label}</h3>
-                {g.rating > 0 && <Stars value={g.rating} />}
+                {isRated(g.rating) && <Stars value={g.rating} />}
               </div>
               <div className="shelf-grid mt">
                 {g.items.map((x) => (
