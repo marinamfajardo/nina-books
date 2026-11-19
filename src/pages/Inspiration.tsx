@@ -6,9 +6,42 @@ import { fmtDate, Modal, PageTitle, useToast } from '../components/ui';
 import { db, nowIso, uid, type Quote } from '../db';
 import { useLibrary } from '../data/hooks';
 import { matches } from '../domain/filters';
-import { CHALLENGES, FACTS, pillOfDay, QUESTIONS, type Pill } from '../domain/inspiration';
+import { CHALLENGES, FACTS, LITERATURE, pillOfDay, QUESTIONS, wikiUrl, type Pill, type StudyWord } from '../domain/inspiration';
+
+function WordPill({ word }: { word: StudyWord }) {
+  const [show, setShow] = useState(false);
+  return (
+    <>
+      <div className="pill-kind">🔤 Palavra para revisar</div>
+      <p style={{ margin: '4px 0', fontFamily: 'var(--serif)', fontSize: '1.5rem' }}>
+        {word.word} {word.language && <span className="badge" style={{ fontFamily: 'var(--sans)' }}>{word.language}</span>}
+      </p>
+      {word.bookTitle && <p className="small muted" style={{ margin: 0 }}>📖 {word.bookTitle}</p>}
+      {show ? (
+        <>
+          <p className="pre" style={{ margin: '6px 0' }}>{word.meaning || '(sem significado anotado)'}</p>
+          {word.example && <p className="small muted" style={{ margin: 0, fontStyle: 'italic' }}>“{word.example}”</p>}
+        </>
+      ) : (
+        <button className="secondary small" style={{ marginTop: 6 }} onClick={() => setShow(true)}>Lembra o significado? Toque para ver</button>
+      )}
+    </>
+  );
+}
 
 function PillBody({ pill }: { pill: Pill }) {
+  if (pill.kind === 'palavra') return <WordPill key={pill.word.word} word={pill.word} />;
+  if (pill.kind === 'literatura') {
+    return (
+      <>
+        <div className="pill-kind">📚 Literatura</div>
+        <p style={{ margin: '4px 0', fontFamily: 'var(--serif)', fontSize: '1.15rem', fontWeight: 700 }}>{pill.topic.title}</p>
+        <p style={{ margin: '4px 0' }}>{pill.topic.text}</p>
+        {pill.topic.tip && <p className="small muted" style={{ margin: '2px 0' }}>💡 {pill.topic.tip}</p>}
+        <a className="small" href={wikiUrl(pill.topic.search)} target="_blank" rel="noreferrer">🔗 Saiba mais na Wikipédia</a>
+      </>
+    );
+  }
   if (pill.kind === 'curiosidade') {
     return (
       <>
@@ -26,7 +59,13 @@ function PillBody({ pill }: { pill: Pill }) {
 /** Cartão diário na estante: curiosidade, desafio ou pergunta. */
 export function PillCard() {
   const [offset, setOffset] = useState(0);
-  const pill = pillOfDay(new Date(), offset);
+  const lib = useLibrary();
+  const glossary = useLiveQuery(() => db.glossary.toArray(), []) ?? [];
+  const words: StudyWord[] = glossary
+    .filter((g) => g.meaning)
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((g) => ({ word: g.word, meaning: g.meaning, language: g.language, example: g.example, bookTitle: g.bookId ? lib.bookMap.get(g.bookId)?.title : undefined }));
+  const pill = pillOfDay(new Date(), offset, words);
   return (
     <div className="card pill-card">
       <PillBody pill={pill} />
@@ -70,6 +109,8 @@ export default function Inspiration() {
       <p className="small muted">Ler sobre os benefícios da leitura ajuda a lembrar por que ela vale a pena. 💗</p>
       <h2 className="mt">🧠 Curiosidades com ciência</h2>
       {FACTS.map((f) => <div key={f.url} className="card"><PillBody pill={{ kind: 'curiosidade', fact: f }} /></div>)}
+      <h2 className="mt">📚 Literatura: gêneros, formas e técnicas</h2>
+      {LITERATURE.map((t) => <div key={t.title} className="card"><PillBody pill={{ kind: 'literatura', topic: t }} /></div>)}
       <h2 className="mt">🎯 Desafios</h2>
       <div className="card">{CHALLENGES.map((c) => <p key={c} style={{ margin: '6px 0' }}>• {c}</p>)}</div>
       <h2 className="mt">💭 Perguntas para pensar</h2>

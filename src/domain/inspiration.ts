@@ -105,16 +105,85 @@ export const QUESTIONS = [
   'Qual foi a leitura mais surpreendente deste ano?',
 ];
 
-export type Pill = { kind: 'curiosidade'; fact: Fact } | { kind: 'desafio'; text: string } | { kind: 'pergunta'; text: string };
+/** Temas e características da literatura, com link para saber mais. */
+export interface LitTopic { title: string; text: string; tip?: string; search: string }
 
-/** Uma "pílula" diferente por dia, alternando curiosidade, desafio e pergunta. */
-export function pillOfDay(date = new Date(), offset = 0): Pill {
+/** Busca na Wikipédia em português: abre direto o artigo quando ele existe. */
+export const wikiUrl = (term: string) => `https://pt.wikipedia.org/wiki/Especial:Pesquisar?search=${encodeURIComponent(term)}&go=Ir`;
+
+export const LITERATURE: LitTopic[] = [
+  { title: 'O que é um conto?', search: 'Conto',
+    text: 'Narrativa curta, com poucos personagens e um único conflito central. Tudo no conto converge para um efeito final — por isso cada palavra conta.',
+    tip: 'Para ler: “Missa do Galo”, de Machado de Assis, ou os contos de Clarice Lispector em “Laços de Família”.' },
+  { title: 'Como escrever um conto', search: 'Conto',
+    text: 'Comece perto do conflito, escolha um só acontecimento importante e pense no final antes de começar. Edgar Allan Poe defendia a “unidade de efeito”: o conto inteiro trabalha para uma única impressão no leitor.',
+    tip: 'Exercício: escreva uma cena de no máximo uma página que termine com uma revelação.' },
+  { title: 'O que é uma crônica?', search: 'Crônica',
+    text: 'Texto curto, leve e próximo do dia a dia, que parte de uma cena comum para chegar a uma reflexão. É um gênero muito forte no Brasil, com Rubem Braga, Fernando Sabino e Clarice Lispector.' },
+  { title: 'Romance, novela e conto: qual a diferença?', search: 'Romance (literatura)',
+    text: 'A principal diferença é a extensão e a complexidade: o conto tem um conflito e poucos personagens; a novela é mais longa, com mais episódios; o romance é a forma mais extensa, com várias tramas e personagens que se transformam.' },
+  { title: 'Como escrever um poema', search: 'Poesia',
+    text: 'Prefira imagens concretas (o que se vê, ouve, toca) a ideias abstratas. Leia em voz alta para sentir o ritmo, corte palavras que não fazem falta e brinque com a quebra dos versos. Poema não precisa rimar.',
+    tip: 'Exercício: descreva um objeto da sua casa em 6 versos, sem dizer o nome dele.' },
+  { title: 'O que é um soneto?', search: 'Soneto',
+    text: 'Poema de 14 versos: dois quartetos (estrofes de 4 versos) e dois tercetos (de 3). Camões e Vinicius de Moraes (“Soneto de Fidelidade”) são mestres da forma.' },
+  { title: 'O que é um haicai?', search: 'Haicai',
+    text: 'Forma poética japonesa de três versos curtos (tradicionalmente 5, 7 e 5 sílabas), que captura um instante da natureza ou do cotidiano. No Brasil, Paulo Leminski e Alice Ruiz escreveram haicais.' },
+  { title: 'Verso livre', search: 'Verso livre',
+    text: 'Poesia sem métrica fixa nem rima obrigatória. Ganhou força com o Modernismo — Manuel Bandeira e Carlos Drummond de Andrade usaram muito.' },
+  { title: 'Tipos de narrador', search: 'Narrador',
+    text: 'Em 1ª pessoa, quem conta é um personagem (“eu”). Em 3ª pessoa, o narrador está de fora; se ele sabe tudo, inclusive pensamentos, é onisciente; se acompanha só um personagem, é limitado.' },
+  { title: 'Narrador não confiável', search: 'Narrador não confiável',
+    text: 'Narrador cuja versão dos fatos não merece total confiança — por interesse, ilusão ou memória falha. O exemplo brasileiro clássico é Bentinho, em “Dom Casmurro”: Capitu traiu ou não?' },
+  { title: 'Fluxo de consciência', search: 'Fluxo de consciência',
+    text: 'Técnica que reproduz o pensamento do personagem como ele acontece, com associações livres e pouca pontuação. Aparece em Virginia Woolf, James Joyce e Clarice Lispector.' },
+  { title: 'Realismo mágico', search: 'Realismo mágico',
+    text: 'Elementos fantásticos aparecem no cotidiano como se fossem normais, sem espanto dos personagens. “Cem Anos de Solidão”, de Gabriel García Márquez, é o grande exemplo.' },
+  { title: 'Romance de formação', search: 'Romance de formação',
+    text: 'Também chamado de Bildungsroman: acompanha o amadurecimento de um personagem da juventude à vida adulta. Ex.: “Grandes Esperanças” (Dickens), “O Ateneu” (Raul Pompeia).' },
+  { title: 'Distopia', search: 'Distopia',
+    text: 'Ficção sobre uma sociedade opressiva ou degradada, que serve de alerta sobre o presente. Clássicos: “1984” (Orwell), “Admirável Mundo Novo” (Huxley), “O Conto da Aia” (Atwood).' },
+  { title: 'A arma de Tchekhov', search: 'Arma de Tchekhov',
+    text: 'Princípio do escritor russo Anton Tchekhov: todo elemento importante apresentado na história deve ter uma função. Se há uma arma na parede no primeiro ato, ela precisa disparar depois.' },
+  { title: 'In medias res', search: 'In medias res',
+    text: 'Expressão latina para começar a história “no meio da ação”, explicando o passado depois. A “Odisseia”, de Homero, começa assim.' },
+  { title: 'Metáfora e comparação', search: 'Metáfora',
+    text: 'Na comparação, a ligação é explícita (“olhos como o mar”); na metáfora, ela é direta (“seus olhos eram o mar”). As duas criam imagens e sentidos novos.' },
+  { title: 'Romance epistolar', search: 'Romance epistolar',
+    text: 'História contada por cartas, diários ou mensagens entre personagens. Exemplos: “Drácula” (Bram Stoker) e “A Cor Púrpura” (Alice Walker).' },
+  { title: 'Literatura de cordel', search: 'Literatura de cordel',
+    text: 'Poesia popular do Nordeste, em versos rimados e com ritmo para ser lida em voz alta, vendida em folhetos pendurados em cordões. Muitas capas são xilogravuras.' },
+  { title: 'O que é uma fábula?', search: 'Fábula',
+    text: 'Narrativa curta, muitas vezes com animais que falam, que termina com uma lição de moral. Esopo e La Fontaine são os mais famosos; Monteiro Lobato recontou várias.' },
+];
+
+export interface StudyWord { word: string; meaning?: string; language?: string; example?: string; bookTitle?: string }
+
+export type Pill =
+  | { kind: 'curiosidade'; fact: Fact }
+  | { kind: 'desafio'; text: string }
+  | { kind: 'pergunta'; text: string }
+  | { kind: 'literatura'; topic: LitTopic }
+  | { kind: 'palavra'; word: StudyWord };
+
+/**
+ * Uma "pílula" diferente por dia, alternando curiosidade, palavra do seu glossário,
+ * desafio, tema de literatura e pergunta. Sem palavras no glossário, pula esse tipo.
+ */
+export function pillOfDay(date = new Date(), offset = 0, words: StudyWord[] = []): Pill {
+  const kinds: Pill['kind'][] = ['curiosidade', 'palavra', 'desafio', 'literatura', 'pergunta'].filter(
+    (k) => k !== 'palavra' || words.length > 0,
+  ) as Pill['kind'][];
   const day = Math.floor(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86_400_000) + offset;
-  const k = ((day % 3) + 3) % 3;
-  const n = Math.floor(day / 3);
-  if (k === 0) return { kind: 'curiosidade', fact: FACTS[n % FACTS.length] };
-  if (k === 1) return { kind: 'desafio', text: CHALLENGES[n % CHALLENGES.length] };
-  return { kind: 'pergunta', text: QUESTIONS[n % QUESTIONS.length] };
+  const k = kinds[((day % kinds.length) + kinds.length) % kinds.length];
+  const n = Math.floor(day / kinds.length);
+  switch (k) {
+    case 'curiosidade': return { kind: k, fact: FACTS[n % FACTS.length] };
+    case 'palavra': return { kind: k, word: words[n % words.length] };
+    case 'desafio': return { kind: k, text: CHALLENGES[n % CHALLENGES.length] };
+    case 'literatura': return { kind: k, topic: LITERATURE[n % LITERATURE.length] };
+    default: return { kind: 'pergunta', text: QUESTIONS[n % QUESTIONS.length] };
+  }
 }
 
 /** Primeira linha do lembrete das 21h. */
