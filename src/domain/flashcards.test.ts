@@ -17,3 +17,17 @@ describe('flashcards (Leitner)', () => {
     expect(isDue('2026-05-11', '2026-05-10')).toBe(false);
   });
 });
+
+describe('rodadas de revisão', () => {
+  it('cada rodada tem todas as palavras, uma vez cada', async () => {
+    const { newRound } = await import('./flashcards');
+    const words = ['a', 'b', 'c', 'd', 'e'].map((id) => ({ id }));
+    const r = newRound(words);
+    expect(r.map((w) => w.id).sort()).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+  it('a nova rodada não começa pela palavra que acabou de sair', async () => {
+    const { newRound } = await import('./flashcards');
+    const words = ['a', 'b', 'c'].map((id) => ({ id }));
+    for (let i = 0; i < 30; i++) expect(newRound(words, 'c')[0].id).not.toBe('c');
+  });
+});

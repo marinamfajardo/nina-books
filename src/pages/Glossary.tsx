@@ -1,12 +1,12 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ErrorBox, Modal, PageTitle, useToast } from '../components/ui';
+import { ErrorBox, Modal, PageTitle, Progress, useToast } from '../components/ui';
 import { db, nowIso, uid, type Book, type GlossaryEntry } from '../db';
 import { ensureListItems } from '../data/actions';
 import { useLibrary, useList } from '../data/hooks';
 import { matches } from '../domain/filters';
-import { isDue, review } from '../domain/flashcards';
+import { newRound, review } from '../domain/flashcards';
 import { today } from '../domain/stats';
 import { defineWord, hasApiKey } from '../services/claude';
 
@@ -99,39 +99,55 @@ function EntryList({ entries, books, onEdit }: { entries: GlossaryEntry[]; books
   );
 }
 
+/**
+ * Revisão com todas as palavras: cada rodada passa por todas, embaralhadas.
+ * Só depois de terminar a rodada, começa outra (acertadas e erradas de novo).
+ */
 function Flashcards({ entries, onClose }: { entries: GlossaryEntry[]; onClose: () => void }) {
-  const [onlyDue, setOnlyDue] = useState(true);
-  const deck = useMemo(() => {
-    const d = entries.filter((e) => !onlyDue || isDue(e.nextReview));
-    return d.sort(() => Math.random() - 0.5);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onlyDue]);
+  const [deck, setDeck] = useState(() => newRound(entries));
+  const [round, setRound] = useState(1);
   const [i, setI] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [score, setScore] = useState({ ok: 0, no: 0 });
+  const [done, setDone] = useState(false);
   const card = deck[i];
 
   const answer = async (correct: boolean) => {
     if (!card) return;
     await db.glossary.update(card.id, review(card.box, correct));
-    setScore((s) => (correct ? { ...s, ok: s.ok + 1 } : { ...s, no: s.no + 1 }));
+    setScore((sc) => (correct ? { ...sc, ok: sc.ok + 1 } : { ...sc, no: sc.no + 1 }));
     setFlipped(false);
-    setI((x) => x + 1);
+    if (i + 1 >= deck.length) setDone(true);
+    else setI(i + 1);
+  };
+
+  const nextRound = () => {
+    setDeck(newRound(entries, card?.id));
+    setRound((r) => r + 1);
+    setI(0);
+    setScore({ ok: 0, no: 0 });
+    setDone(false);
   };
 
   return (
     <Modal title="Revisão" onClose={onClose}>
       <div className="stack">
-        <label className="row small"><input type="checkbox" checked={onlyDue} onChange={(e) => { setOnlyDue(e.target.checked); setI(0); }} /> Só as palavras do dia</label>
-        {!card ? (
+        {!deck.length ? (
+          <div className="empty"><div className="big">🌷</div>Nenhuma palavra no glossário ainda.<div className="mt"><button onClick={onClose}>Fechar</button></div></div>
+        ) : done ? (
           <div className="empty">
             <div className="big">🌷</div>
-            {deck.length ? <>Fim da revisão! ✔ {score.ok} · ✘ {score.no}</> : 'Nenhuma palavra para revisar hoje.'}
-            <div className="mt"><button onClick={onClose}>Fechar</button></div>
+            <b>Você passou por todas as {deck.length} palavras!</b>
+            <div className="mt">Rodada {round}: ✔ {score.ok} acertos · ✘ {score.no} erros</div>
+            <div className="row mt" style={{ justifyContent: 'center' }}>
+              <button onClick={nextRound}>🔁 Revisar todas de novo</button>
+              <button className="secondary" onClick={onClose}>Fechar</button>
+            </div>
           </div>
         ) : (
           <>
-            <div className="small muted center">{i + 1} de {deck.length}</div>
+            <div className="small muted center">Rodada {round} · {i + 1} de {deck.length}</div>
+            <Progress pct={Math.round((i / deck.length) * 100)} />
             <div className={`flashcard${flipped ? ' back' : ''}`} onClick={() => setFlipped(!flipped)}>
               {!flipped ? (
                 <>
@@ -174,14 +190,13 @@ export default function Glossary() {
   const shown = all
     .filter((e) => (!lang || e.language === lang) && (!bookId || e.bookId === bookId) && (!q || matches(e.word, q) || matches(e.meaning, q)))
     .sort((a, b) => a.word.localeCompare(b.word, 'pt-BR'));
-  const due = shown.filter((e) => isDue(e.nextReview)).length;
   const usedLangs = [...new Set([...all.map((e) => e.language).filter(Boolean) as string[]])];
   const usedBooks = [...new Set(all.map((e) => e.bookId).filter(Boolean) as string[])];
 
   return (
     <div>
       <PageTitle right={<button onClick={() => setEdit({})}>+ Palavra</button>}>Glossário</PageTitle>
-      <button className="block secondary" onClick={() => setCards(true)} disabled={!shown.length}>🃏 Revisar com flashcards {due ? `(${due} para hoje)` : ''}</button>
+      <button className="block secondary" onClick={() => setCards(true)} disabled={!shown.length}>🃏 Revisar com flashcards ({shown.length} palavra{shown.length === 1 ? '' : 's'})</button>
       <div className="stack mt">
         <input type="search" placeholder="Buscar palavra ou significado" value={q} onChange={(e) => setQ(e.target.value)} />
         <div className="grid2">

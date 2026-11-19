@@ -11,3 +11,17 @@ export function review(box: number, correct: boolean, ref = today()) {
 }
 
 export const isDue = (nextReview: string, ref = today()) => nextReview <= ref;
+
+/**
+ * Nova rodada de revisão: todas as palavras, embaralhadas, cada uma uma vez.
+ * Evita que a primeira da rodada seja a mesma que acabou de sair.
+ */
+export function newRound<T extends { id: string }>(words: T[], lastId?: string, random = Math.random): T[] {
+  const deck = [...words];
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  if (deck.length > 1 && deck[0].id === lastId) [deck[0], deck[1]] = [deck[1], deck[0]];
+  return deck;
+}
