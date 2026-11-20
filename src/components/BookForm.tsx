@@ -9,10 +9,16 @@ import { shrinkImage } from '../services/media';
 import { CoverStep } from './CoverCropper';
 import { FeelingPicker } from './FeelingPicker';
 import { ListEditor } from './ListEditor';
+import { EditionPicker } from './EditionPicker';
+import { workIdFor } from '../domain/editions';
 import { COUNTRY_OPTIONS, toCountryCode } from '../domain/countries';
 import { CaptureButton, ChipSelect, Cover, ErrorBox, Modal, MultiChips, Stars } from './ui';
 
-export type BookDraft = Partial<Book> & { title: string; authors: string[]; coverBlob?: Blob; readYear?: number; readMonth?: number };
+export type BookDraft = Partial<Book> & {
+  title: string; authors: string[]; coverBlob?: Blob; readYear?: number; readMonth?: number;
+  /** livro escolhido como "o mesmo livro" (outra edição/idioma) */
+  linkTo?: string;
+};
 
 const MONTHS = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
 
@@ -81,7 +87,13 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
 }) {
   const [newPhoto, setNewPhoto] = useState<Blob | null>(null);
   const [listEdit, setListEdit] = useState<ListKind | null>(null);
+  const [picking, setPicking] = useState(false);
   const [d, setD] = useState<BookDraft>({ status: 'quero_ler', favorite: false, rating: 0, genres: [], tags: [], ...initial });
+  const linkedTitle = useLiveQuery(async () => {
+    if (!d.workId) return undefined;
+    const others = await db.books.filter((b) => b.id !== d.id && (b.workId === d.workId || b.id === d.workId)).toArray();
+    return others.map((b) => `${b.title}${b.editionLanguage ? ` (${b.editionLanguage})` : ''}`).join(', ') || undefined;
+  }, [d.workId, d.id]);
   const [authors, setAuthors] = useState(initial.authors.join(', '));
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(() => (initial.coverBlob ? URL.createObjectURL(initial.coverBlob) : undefined));
   const [saving, setSaving] = useState(false);
@@ -120,6 +132,32 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           <label className="field"><span>Título *</span><input required value={d.title} onChange={(e) => set({ title: e.target.value })} /></label>
           <label className="field"><span>Subtítulo</span><input value={d.subtitle ?? ''} onChange={(e) => set({ subtitle: e.target.value || undefined })} /></label>
         </div>
+      </div>
+      <div className="card" style={{ background: 'var(--surface-2)', boxShadow: 'none', marginBottom: 0 }}>
+        {d.workId ? (
+          <div className="stack" style={{ gap: 6 }}>
+            <div className="row between nowrap">
+              <span className="small">📚 Mesmo livro que <b>{linkedTitle ?? 'outro exemplar'}</b></span>
+              <button type="button" className="ghost small" onClick={() => set({ workId: undefined, linkTo: undefined })}>desfazer</button>
+            </div>
+            <label className="field"><span>🌐 Idioma deste exemplar</span>
+              <select value={d.editionLanguage ?? ''} onChange={async (e) => {
+                let v = e.target.value;
+                if (v === '__novo') {
+                  v = prompt('Nome do idioma:')?.trim() ?? '';
+                  if (v) await ensureListItems('language', [v]);
+                }
+                set({ editionLanguage: v || undefined });
+              }}>
+                <option value="">Escolha…</option>
+                {[...new Set([...languages, ...(d.editionLanguage ? [d.editionLanguage] : [])])].map((l) => <option key={l}>{l}</option>)}
+                <option value="__novo">+ Adicionar idioma…</option>
+              </select>
+            </label>
+          </div>
+        ) : (
+          <button type="button" className="ghost small" style={{ padding: 0 }} onClick={() => setPicking(true)}>📚 Tenho este livro em outra edição/idioma</button>
+        )}
       </div>
       <label className="field"><span>Autor(es) / grupo — separe por vírgula</span><input value={authors} placeholder="Ex.: Machado de Assis — ou Marvel, DC, Disney" onChange={(e) => setAuthors(e.target.value)} /></label>
       <div className="grid2" style={{ gridTemplateColumns: '2fr 1fr' }}>
@@ -250,6 +288,28 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
         <p className="small muted">Se você informar o total de palavras, ele é usado no lugar da estimativa por página.</p>
       </details>
 
+      {picking && (
+        <EditionPicker
+          excludeId={d.id}
+          onClose={() => setPicking(false)}
+          onPick={(b) => {
+            // mesmo livro: copia o que for igual entre as edições, sem apagar o que já foi preenchido
+            setD((x) => ({
+              ...x,
+              workId: workIdFor(b),
+              linkTo: b.id,
+              title: x.title || b.title,
+              series: x.series ?? b.series,
+              seriesNumber: x.seriesNumber ?? b.seriesNumber,
+              genres: x.genres?.length ? x.genres : b.genres,
+              country: x.country ?? b.country,
+              originalLanguage: x.originalLanguage ?? b.originalLanguage,
+            }));
+            if (!authors.trim()) setAuthors(b.authors.join(', '));
+            setPicking(false);
+          }}
+        />
+      )}
       {listEdit && (
         <ListEditor
           kind={listEdit}

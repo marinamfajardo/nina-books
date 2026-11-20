@@ -45,6 +45,7 @@ export function BookList({ books, meta }: { books: Book[]; meta: Map<string, Boo
               <div className="small muted ellipsis">{b.authors.join(', ')}{b.pageCount ? ` · ${b.pageCount} p.` : ''}</div>
               <div className="row" style={{ gap: 6, marginTop: 4 }}>
                 <span className="badge">{STATUS_LABEL[b.status]}</span>
+                {b.editionLanguage && <span className="badge">🌐 {b.editionLanguage}</span>}
                 {isRated(b.rating) && <Stars value={b.rating} />}
                 {b.feelings?.length ? <span>{b.feelings.slice(0, 4).join('')}</span> : null}
                 {m && m.pct > 0 && m.pct < 100 && <span className="small muted">{m.pct}%</span>}

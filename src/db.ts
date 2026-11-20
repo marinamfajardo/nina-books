@@ -35,6 +35,10 @@ export interface Book {
   feelings?: string[];
   /** País onde o livro foi escrito originalmente (código ISO de 2 letras, ex.: "BR") */
   country?: string;
+  /** Mesmo livro em outra edição/idioma: livros com o mesmo workId são o mesmo livro */
+  workId?: string;
+  /** Idioma deste exemplar (ex.: "Inglês") */
+  editionLanguage?: string;
   /** Onde o livro está (ex.: "Vitória", "São Paulo") */
   location?: string;
   format?: Format;

@@ -26,19 +26,29 @@ export function pastReadingDate(year?: number, month?: number) {
   return { date: date > now ? now : date, approx: 'ano' as const };
 }
 
+/** O livro escolhido como "o mesmo livro" também passa a fazer parte do grupo. */
+async function linkTarget(d: BookDraft) {
+  if (!d.linkTo || !d.workId) return;
+  const target = await db.books.get(d.linkTo);
+  if (target && target.workId !== d.workId) await updateBook(target.id, { workId: d.workId });
+}
+
 export async function createFromDraft(d: BookDraft) {
-  const { coverBlob: _, id: _id, readYear, readMonth, ...rest } = d;
+  const { coverBlob: _, id: _id, readYear, readMonth, linkTo: _l, ...rest } = d;
   const cover = await resolveCover(d);
   const finished = d.status === 'lido' ? pastReadingDate(readYear, readMonth) : undefined;
-  return createBook({ ...rest, ...cover }, finished);
+  const id = await createBook({ ...rest, ...cover }, finished);
+  await linkTarget(d);
+  return id;
 }
 
 export async function updateFromDraft(id: string, d: BookDraft) {
   const prev = await db.books.get(id);
   if (!prev) return;
-  const { coverBlob: _, id: _id, createdAt: _c, status, readYear: _y, readMonth: _m, ...rest } = d;
+  const { coverBlob: _, id: _id, createdAt: _c, status, readYear: _y, readMonth: _m, linkTo: _l, ...rest } = d;
   const cover = await resolveCover(d, prev);
   if (cover.coverId !== prev.coverId && prev.coverId) await db.media.delete(prev.coverId);
-  await updateBook(id, { ...rest, ...cover });
+  await updateBook(id, { ...rest, ...cover, workId: d.workId, editionLanguage: d.workId ? d.editionLanguage : undefined });
+  await linkTarget(d);
   if (status && status !== prev.status) await changeStatus(id, status);
 }

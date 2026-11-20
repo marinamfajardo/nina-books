@@ -6,6 +6,7 @@ import { BookForm } from '../../components/BookForm';
 import { FeelingPicker } from '../../components/FeelingPicker';
 import { feelingLabel } from '../../domain/feelings';
 import { countryName } from '../../domain/countries';
+import { editionLabel, otherEditions } from '../../domain/editions';
 import { CaptureButton, ChipSelect, Cover, Modal, Progress, Stars, fmtDate, useToast } from '../../components/ui';
 import { CoverStep } from '../../components/CoverCropper';
 import { shrinkImage } from '../../services/media';
@@ -31,6 +32,7 @@ export default function BookDetail() {
   const { id } = useParams();
   const book = useBook(id);
   const allBooks = useLiveQuery(() => db.books.toArray(), []) ?? [];
+  const editions = book ? otherEditions(book, allBooks) : [];
   const nav = useNavigate();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -85,6 +87,7 @@ export default function BookDetail() {
         <div>
           <h1 style={{ marginBottom: 2 }}>{book.title}</h1>
           {book.subtitle && <div className="muted" style={{ marginBottom: 4 }}>{book.subtitle}</div>}
+          {book.editionLanguage && <div className="small" style={{ marginBottom: 4 }}><span className="badge">🌐 Exemplar em {book.editionLanguage}</span></div>}
           {book.series && <div className="small" style={{ marginBottom: 4 }}><Link to={`/grupo/serie/${encodeURIComponent(book.series)}`}>📚 {book.series}{book.seriesNumber ? ` · volume ${book.seriesNumber}` : ''}</Link></div>}
           <div style={{ fontWeight: 700 }}>
             {book.authors.map((a, i) => <span key={a}>{i > 0 && ', '}<Link to={`/autor/${encodeURIComponent(a)}`}>{a}</Link></span>)}
@@ -133,6 +136,25 @@ export default function BookDetail() {
             </div>
             {loan && <div className="alert info small">📤 Emprestado para <b>{loan.person}</b> desde {fmtDate(loan.date)}. <Link to="/emprestimos">Ver empréstimos</Link></div>}
           </div>
+          {editions.length > 0 && (
+            <div className="card">
+              <h3>🌐 Você também tem este livro em</h3>
+              <div className="strip">
+                {editions.map((b) => (
+                  <Link key={b.id} to={`/livro/${b.id}`} className="strip-item">
+                    <Cover book={b} />
+                    <div className="small" style={{ fontWeight: 700, marginTop: 4 }}>{editionLabel(b) ?? 'outro idioma'}</div>
+                    <div className="small ellipsis">{b.title}</div>
+                  </Link>
+                ))}
+              </div>
+              <button className="ghost small" onClick={async () => {
+                if (confirm('Desligar este exemplar das outras edições? Os livros continuam na estante, só deixam de aparecer juntos.')) {
+                  await updateBook(book.id, { workId: undefined, editionLanguage: undefined });
+                }
+              }}>Desligar das outras edições</button>
+            </div>
+          )}
           <div className="card">
             <h3>💗 Como o livro me fez sentir</h3>
             <FeelingPicker value={book.feelings ?? []} onChange={(feelings) => updateBook(book.id, { feelings })} />
