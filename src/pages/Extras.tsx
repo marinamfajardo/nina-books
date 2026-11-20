@@ -223,7 +223,7 @@ export function Wishlist() {
         <Modal title="Desejo" onClose={() => setEdit(null)}>
           <div className="stack">
             <label className="field"><span>Título *</span><input value={edit.title ?? ''} onChange={(e) => setEdit({ ...edit, title: e.target.value })} /></label>
-            <label className="field"><span>Autor</span><input value={edit.author ?? ''} onChange={(e) => setEdit({ ...edit, author: e.target.value })} /></label>
+            <label className="field"><span>Autor / grupo</span><input value={edit.author ?? ''} onChange={(e) => setEdit({ ...edit, author: e.target.value })} /></label>
             <div className="grid2">
               <label className="field"><span>Prioridade</span>
                 <select value={edit.priority ?? 2} onChange={(e) => setEdit({ ...edit, priority: Number(e.target.value) })}>

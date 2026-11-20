@@ -57,7 +57,7 @@ export default function Retrospective() {
             {data.t.seconds > 0 && <div className="kpi"><div className="v">{formatDuration(data.t.seconds)}</div><div className="l">lendo (cronometrado)</div></div>}
             {data.bestMonth && <div className="kpi"><div className="v" style={{ fontSize: '1.15rem' }}>{MONTHS[Number(data.bestMonth.key.slice(5, 7)) - 1]}</div><div className="l">mês com mais páginas ({formatNumber(data.bestMonth.pages)})</div></div>}
             {data.topGenre && <div className="kpi"><div className="v" style={{ fontSize: '1.15rem' }}>{data.topGenre.key}</div><div className="l">gênero do ano</div></div>}
-            {data.topAuthor && <div className="kpi"><div className="v" style={{ fontSize: '1.15rem' }}>{data.topAuthor.name}</div><div className="l">autor(a) do ano · {data.topAuthor.booksRead} livro(s)</div></div>}
+            {data.topAuthor && <div className="kpi"><div className="v" style={{ fontSize: '1.15rem' }}>{data.topAuthor.name}</div><div className="l">autor / grupo do ano · {data.topAuthor.booksRead} livro(s)</div></div>}
             {data.longest?.book.pageCount && <div className="kpi"><div className="v" style={{ fontSize: '1.15rem' }}>{data.longest.book.title}</div><div className="l">livro mais longo · {data.longest.book.pageCount} p.</div></div>}
             {data.yearMedals.length > 0 && <div className="kpi"><div className="v">{data.yearMedals.map((m) => m.emoji).join('')}</div><div className="l">medalhas conquistadas</div></div>}
           </div>

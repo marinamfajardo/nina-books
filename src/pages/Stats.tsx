@@ -128,7 +128,7 @@ export default function Stats() {
 
       <div className="grid2" style={{ marginBottom: 14 }}>
         <Link to="/ranking" className="group-tile"><b>🏆 Meu ranking</b><span className="muted">›</span></Link>
-        <Link to="/autores" className="group-tile"><b>✍️ Autores</b><span className="muted">›</span></Link>
+        <Link to="/autores" className="group-tile"><b>✍️ Autores / grupos</b><span className="muted">›</span></Link>
         <Link to={`/retrospectiva/${goalYear}`} className="group-tile"><b>📖 Retrospectiva {goalYear}</b><span className="muted">›</span></Link>
         <Link to="/conquistas" className="group-tile"><b>🏅 Conquistas</b><span className="muted">›</span></Link>
       </div>
@@ -178,7 +178,7 @@ export default function Stats() {
         <div className="row between">
           <h3 style={{ margin: 0 }}>{metric === 'pages' ? 'Páginas' : 'Palavras'} por grupo</h3>
           <select value={by} onChange={(e) => setBy(e.target.value as GroupBy)} style={{ width: 'auto' }}>
-            <option value="genero">Gênero</option><option value="idioma">Idioma</option><option value="autor">Autor</option>
+            <option value="genero">Gênero</option><option value="idioma">Idioma</option><option value="autor">Autor / grupo</option>
             <option value="status">Status</option><option value="formato">Formato</option>
           </select>
         </div>

@@ -131,7 +131,7 @@ export default function Shelf() {
         <span style={{ position: 'absolute', left: 12, color: 'var(--muted)', display: 'flex' }}>{Icon.search()}</span>
         <input
           type="search"
-          placeholder="Buscar título, autor, citação, anotação, palavra…"
+          placeholder="Buscar título, autor/grupo, saga, citação, palavra…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           style={{ paddingLeft: 42 }}

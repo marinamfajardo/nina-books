@@ -12,7 +12,7 @@ const label = (by: GroupKey, v: string) =>
   by === 'status' ? STATUS_LABEL[v as keyof typeof STATUS_LABEL] : by === 'formato' ? FORMAT_LABEL[v as keyof typeof FORMAT_LABEL] : v;
 
 const PLURAL: Record<GroupKey, string> = {
-  genero: 'Gêneros', idioma: 'Idiomas', status: 'Status', autor: 'Autores', ano: 'Anos de leitura', tag: 'Tags', formato: 'Formatos', serie: 'Séries e sagas', local: 'Onde estão os livros',
+  genero: 'Gêneros', idioma: 'Idiomas', status: 'Status', autor: 'Autores / grupos', ano: 'Anos de leitura', tag: 'Tags', formato: 'Formatos', serie: 'Séries e sagas', local: 'Onde estão os livros',
 };
 
 export function GroupList() {

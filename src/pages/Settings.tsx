@@ -42,7 +42,7 @@ export default function Settings() {
           <Link to="/inspiracao" className="group-tile"><b>🧠 Inspiração</b></Link>
           <Link to="/retrospectiva" className="group-tile"><b>📖 Retrospectiva</b></Link>
           <Link to="/ranking" className="group-tile"><b>🏆 Ranking</b></Link>
-          <Link to="/autores" className="group-tile"><b>✍️ Autores</b></Link>
+          <Link to="/autores" className="group-tile"><b>✍️ Autores / grupos</b></Link>
           <Link to="/metas" className="group-tile"><b>🎯 Metas</b></Link>
           <Link to="/quero-ler" className="group-tile"><b>📌 Quero ler</b></Link>
           <Link to="/emprestimos" className="group-tile"><b>📤 Empréstimos</b></Link>

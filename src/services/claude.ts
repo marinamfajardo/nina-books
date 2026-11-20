@@ -185,7 +185,8 @@ export async function analyzeCover(b64: string, mediaType: string): Promise<Cove
         text:
           'Esta é a foto de um livro. Responda só com JSON neste formato:\n' +
           '{"titulo": "...", "autores": ["..."], "cantos": [[x,y],[x,y],[x,y],[x,y]]}\n' +
-          '- titulo e autores: exatamente como aparecem na capa (sem inventar; use "" ou [] se não der para ler).\n' +
+          '- titulo e autores: exatamente como aparecem na capa (sem inventar; use "" ou [] se não der para ler). ' +
+          'Se a capa não mostrar autor, mas mostrar o grupo, estúdio ou selo responsável (ex.: Marvel, DC, Disney), use esse nome em autores.\n' +
           '- cantos: os 4 cantos da CAPA do livro (só a capa da frente, sem o fundo, a mesa ou a mão), na ordem ' +
           'superior esquerdo, superior direito, inferior direito, inferior esquerdo, com x e y como frações de 0 a 1 ' +
           'da largura e da altura da foto. Use null se não encontrar a capa.',

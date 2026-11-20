@@ -46,7 +46,7 @@ export default function Ranking() {
     <div>
       <PageTitle back right={<YearSelect value={year} onChange={setYear} />}>Meu ranking</PageTitle>
       <div className="tabs">
-        {([['livros', 'Livros'], ['autores', 'Autores'], ['generos', 'Gêneros']] as const).map(([k, l]) => (
+        {([['livros', 'Livros'], ['autores', 'Autores / grupos'], ['generos', 'Gêneros']] as const).map(([k, l]) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -181,8 +181,8 @@ export function AuthorList() {
   const shown = all.filter((a) => a.name.toLowerCase().includes(q.toLowerCase()));
   return (
     <div>
-      <PageTitle back>Autores</PageTitle>
-      <input type="search" placeholder="Buscar autor" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} />
+      <PageTitle back>Autores / grupos</PageTitle>
+      <input type="search" placeholder="Buscar autor ou grupo" value={q} onChange={(e) => setQ(e.target.value)} style={{ marginBottom: 10 }} />
       {shown.map((a) => (
         <Link key={a.name} to={`/autor/${encodeURIComponent(a.name)}`} className="list-item">
           <div className="grow"><b>{a.name}</b><div className="small muted">{a.books.length} livro(s) · {a.booksRead} lido(s) · {formatNumber(a.pages)} páginas</div></div>

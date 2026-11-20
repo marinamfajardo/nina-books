@@ -121,7 +121,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           <label className="field"><span>Subtítulo</span><input value={d.subtitle ?? ''} onChange={(e) => set({ subtitle: e.target.value || undefined })} /></label>
         </div>
       </div>
-      <label className="field"><span>Autor(es) — separe por vírgula</span><input value={authors} onChange={(e) => setAuthors(e.target.value)} /></label>
+      <label className="field"><span>Autor(es) / grupo — separe por vírgula</span><input value={authors} placeholder="Ex.: Machado de Assis — ou Marvel, DC, Disney" onChange={(e) => setAuthors(e.target.value)} /></label>
       <div className="grid2" style={{ gridTemplateColumns: '2fr 1fr' }}>
         <label className="field"><span>Série ou saga (opcional)</span>
           <input list="series-list" placeholder="Ex.: Harry Potter" value={d.series ?? ''} onChange={(e) => set({ series: e.target.value || undefined })} />

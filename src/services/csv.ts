@@ -32,7 +32,7 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 const ALIASES: Record<string, string[]> = {
   title: ['titulo', 'title', 'nome', 'livro'],
   subtitle: ['subtitulo', 'subtitle'],
-  authors: ['autores', 'autor', 'author', 'authors', 'autora'],
+  authors: ['autores', 'autor', 'author', 'authors', 'autora', 'autorgrupo', 'autoresgrupos', 'grupo'],
   extraAuthors: ['additionalauthors'],
   publisher: ['editora', 'publisher'],
   year: ['ano', 'year', 'yearpublished', 'anopublicacao', 'originalpublicationyear'],

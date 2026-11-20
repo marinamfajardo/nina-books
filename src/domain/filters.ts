@@ -5,7 +5,7 @@ import { isFavoriteBook } from './rating';
 export type GroupKey = 'genero' | 'idioma' | 'status' | 'autor' | 'ano' | 'tag' | 'formato' | 'serie' | 'local';
 
 export const GROUP_LABEL: Record<GroupKey, string> = {
-  genero: 'Gênero', idioma: 'Idioma', status: 'Status', autor: 'Autor', ano: 'Ano de leitura', tag: 'Tag', formato: 'Formato', serie: 'Série / saga', local: 'Localização',
+  genero: 'Gênero', idioma: 'Idioma', status: 'Status', autor: 'Autor / grupo', ano: 'Ano de leitura', tag: 'Tag', formato: 'Formato', serie: 'Série / saga', local: 'Localização',
 };
 
 export interface Filters {
@@ -24,7 +24,7 @@ export interface Filters {
 
 export type SortKey = 'adicao' | 'titulo' | 'autor' | 'conclusao' | 'nota' | 'paginas';
 export const SORT_LABEL: Record<SortKey, string> = {
-  adicao: 'Data de adição', titulo: 'Título', autor: 'Autor', conclusao: 'Data de conclusão', nota: 'Nota', paginas: 'Nº de páginas',
+  adicao: 'Data de adição', titulo: 'Título', autor: 'Autor / grupo', conclusao: 'Data de conclusão', nota: 'Nota', paginas: 'Nº de páginas',
 };
 
 export const groupValues = (b: Book, m: BookMeta | undefined, by: GroupKey): string[] => {

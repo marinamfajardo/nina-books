@@ -22,7 +22,10 @@ import { useAutoSync } from './sync/useSync';
 
 function ScrollTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // chaves: navegadores novos devolvem uma Promise em scrollTo, e o React trataria isso como "limpeza"
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return null;
 }
 
