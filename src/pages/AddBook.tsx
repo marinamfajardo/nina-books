@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { BookForm, type BookDraft } from '../components/BookForm';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { BookForm, linkedDraft, type BookDraft } from '../components/BookForm';
 import { CoverStep } from '../components/CoverCropper';
 import { ErrorBox, PageTitle, useToast } from '../components/ui';
 import { db } from '../db';
@@ -27,6 +28,10 @@ export default function AddBook() {
   const [error, setError] = useState<string | null>(null);
   const camera = useRef<HTMLInputElement>(null);
   const gallery = useRef<HTMLInputElement>(null);
+  // "Adicionar mesmo livro em outro idioma" a partir da página de um livro
+  const [params] = useSearchParams();
+  const sameId = params.get('mesmo');
+  const same = useLiveQuery(async () => (sameId ? (await db.books.get(sameId)) ?? null : null), [sameId]);
 
   const onFile = async (f?: File) => {
     if (!f) return;
@@ -41,7 +46,7 @@ export default function AddBook() {
 
   const save = async (d: BookDraft) => {
     try {
-      const dup = await findSameBook(d.title, d.authors);
+      const dup = d.workId ? undefined : await findSameBook(d.title, d.authors);
       if (dup && !confirm(`“${dup.title}” já está na sua estante. Adicionar outro exemplar mesmo assim?`)) {
         nav(`/livro/${dup.id}`);
         return;
@@ -69,7 +74,8 @@ export default function AddBook() {
           photo={photo}
           onRetake={() => camera.current?.click()}
           onDone={(cover, a) => {
-            setDraft({ title: a?.title ?? '', authors: a?.authors ?? [], coverBlob: cover });
+            const base: BookDraft = { title: a?.title ?? '', authors: a?.authors ?? [], coverBlob: cover };
+            setDraft(same ? linkedDraft(base, same) : base);
             setStep('dados');
           }}
         />
@@ -83,7 +89,9 @@ export default function AddBook() {
       <div>
         <PageTitle>Dados do livro</PageTitle>
         <ErrorBox error={error} />
-        {draft.title ? (
+        {draft.workId && same ? (
+          <div className="alert info small">🌐 Mesmo livro que <b>{same.title}</b>. Já copiei autor, saga e gêneros. Escolha o idioma deste exemplar e confira o título.</div>
+        ) : draft.title ? (
           <div className="alert info small">✨ A IA leu o título e o autor na capa. Confira e corrija se precisar.</div>
         ) : (
           <div className="alert info small">Digite o título e o autor do livro.</div>
@@ -99,6 +107,7 @@ export default function AddBook() {
     <div>
       <PageTitle>Adicionar livro</PageTitle>
       <ErrorBox error={error} />
+      {same && <div className="alert info small">🌐 Cadastrando <b>{same.title}</b> em outro idioma. Os dois ficam separados, mas ligados como uma coleção.</div>}
       <div className="card stack center">
         <div style={{ fontSize: '3.4rem' }}>📷</div>
         <h2>Tire uma foto da capa</h2>

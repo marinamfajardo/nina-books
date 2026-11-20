@@ -12,7 +12,8 @@ import { shrinkImage } from '../../services/media';
 import { db } from '../../db';
 import { changeStatus, deleteBook, replaceMedia, updateBook } from '../../data/actions';
 import { useBook } from '../../data/hooks';
-import { updateFromDraft } from '../../data/saveDraft';
+import { linkBooks, updateFromDraft } from '../../data/saveDraft';
+import { EditionPicker } from '../../components/EditionPicker';
 import { FORMAT_LABEL, OWNERSHIP_LABEL, STATUS_LABEL, STATUSES } from '../../domain/constants';
 import { currentPage, progressPercent, today } from '../../domain/stats';
 import { BookGlossaryTab } from '../Glossary';
@@ -36,6 +37,7 @@ export default function BookDetail() {
   const [params, setParams] = useSearchParams();
   const tab = (params.get('aba') as Tab) || 'geral';
   const [editing, setEditing] = useState(false);
+  const [similar, setSimilar] = useState<'menu' | 'pick' | null>(null);
   const [coverPhoto, setCoverPhoto] = useState<Blob | null>(null);
   const [finishing, setFinishing] = useState<'lido' | 'desisti' | null>(null);
   const [finishDate, setFinishDate] = useState(today());
@@ -145,6 +147,23 @@ export default function BookDetail() {
             </div>
           ) : (
             <button className="secondary block" style={{ marginBottom: 14 }} onClick={() => setParams({ aba: 'resumo' }, { replace: true })}>📖 Adicionar sinopse</button>
+          )}
+          <button className="secondary block" style={{ marginBottom: 14 }} onClick={() => setSimilar('menu')}>🌐 Adicionar similar (outro idioma)</button>
+          {similar === 'menu' && (
+            <Modal title="Mesmo livro em outro idioma" onClose={() => setSimilar(null)}>
+              <p className="small muted">Os livros ficam separados na estante, mas ligados como uma coleção. Na página de cada um aparece o quadro “🌐 Outros idiomas”.</p>
+              <div className="stack">
+                <button className="block" onClick={() => nav(`/adicionar?mesmo=${book.id}`)}>📷 Cadastrar o livro agora</button>
+                <button className="secondary block" onClick={() => setSimilar('pick')}>📚 Já está na minha estante</button>
+              </div>
+            </Modal>
+          )}
+          {similar === 'pick' && (
+            <EditionPicker excludeId={book.id} onClose={() => setSimilar(null)} onPick={async (b) => {
+              await linkBooks(book.id, b.id);
+              setSimilar(null);
+              toast('Livros ligados 🌐');
+            }} />
           )}
           <div className="row">
             <Link to={`/emprestimos?livro=${book.id}`} className="btn secondary grow">📤 Emprestar</Link>

@@ -294,17 +294,7 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
           onClose={() => setPicking(false)}
           onPick={(b) => {
             // mesmo livro: copia o que for igual entre as edições, sem apagar o que já foi preenchido
-            setD((x) => ({
-              ...x,
-              workId: workIdFor(b),
-              linkTo: b.id,
-              title: x.title || b.title,
-              series: x.series ?? b.series,
-              seriesNumber: x.seriesNumber ?? b.seriesNumber,
-              genres: x.genres?.length ? x.genres : b.genres,
-              country: x.country ?? b.country,
-              originalLanguage: x.originalLanguage ?? b.originalLanguage,
-            }));
+            setD((x) => linkedDraft(x, b));
             if (!authors.trim()) setAuthors(b.authors.join(', '));
             setPicking(false);
           }}
@@ -344,4 +334,20 @@ export function BookForm({ initial, onSave, onCancel, saveLabel = 'Salvar', with
       </div>
     </form>
   );
+}
+
+/** Liga o rascunho ao livro `b` (mesmo livro, outro idioma), copiando o que é igual entre as edições. */
+export function linkedDraft(x: BookDraft, b: Book): BookDraft {
+  return {
+    ...x,
+    workId: workIdFor(b),
+    linkTo: b.id,
+    title: x.title || b.title,
+    authors: x.authors?.length ? x.authors : b.authors,
+    series: x.series ?? b.series,
+    seriesNumber: x.seriesNumber ?? b.seriesNumber,
+    genres: x.genres?.length ? x.genres : b.genres,
+    country: x.country ?? b.country,
+    originalLanguage: x.originalLanguage ?? b.originalLanguage,
+  };
 }

@@ -52,3 +52,13 @@ export async function updateFromDraft(id: string, d: BookDraft) {
   await linkTarget(d);
   if (status && status !== prev.status) await changeStatus(id, status);
 }
+
+/** Liga dois livros já cadastrados como o mesmo livro em idiomas diferentes. */
+export async function linkBooks(aId: string, bId: string) {
+  const [a, b] = await Promise.all([db.books.get(aId), db.books.get(bId)]);
+  if (!a || !b) return;
+  const wid = a.workId ?? b.workId ?? a.id;
+  const old = new Set([a.workId, b.workId].filter(Boolean));
+  const group = (await db.books.toArray()).filter((x) => x.id === a.id || x.id === b.id || (x.workId && old.has(x.workId)));
+  for (const x of group) if (x.workId !== wid) await updateBook(x.id, { workId: wid });
+}
