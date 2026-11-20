@@ -1,12 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { SeriesStrip } from '../../components/BookBrowser';
+import { EditionsStrip, SeriesStrip } from '../../components/BookBrowser';
 import { BookForm } from '../../components/BookForm';
 import { FeelingPicker } from '../../components/FeelingPicker';
 import { feelingLabel } from '../../domain/feelings';
 import { countryName } from '../../domain/countries';
-import { editionLabel, otherEditions } from '../../domain/editions';
 import { CaptureButton, ChipSelect, Cover, Modal, Progress, Stars, fmtDate, useToast } from '../../components/ui';
 import { CoverStep } from '../../components/CoverCropper';
 import { shrinkImage } from '../../services/media';
@@ -32,7 +31,6 @@ export default function BookDetail() {
   const { id } = useParams();
   const book = useBook(id);
   const allBooks = useLiveQuery(() => db.books.toArray(), []) ?? [];
-  const editions = book ? otherEditions(book, allBooks) : [];
   const nav = useNavigate();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -136,25 +134,6 @@ export default function BookDetail() {
             </div>
             {loan && <div className="alert info small">📤 Emprestado para <b>{loan.person}</b> desde {fmtDate(loan.date)}. <Link to="/emprestimos">Ver empréstimos</Link></div>}
           </div>
-          {editions.length > 0 && (
-            <div className="card">
-              <h3>🌐 Você também tem este livro em</h3>
-              <div className="strip">
-                {editions.map((b) => (
-                  <Link key={b.id} to={`/livro/${b.id}`} className="strip-item">
-                    <Cover book={b} />
-                    <div className="small" style={{ fontWeight: 700, marginTop: 4 }}>{editionLabel(b) ?? 'outro idioma'}</div>
-                    <div className="small ellipsis">{b.title}</div>
-                  </Link>
-                ))}
-              </div>
-              <button className="ghost small" onClick={async () => {
-                if (confirm('Desligar este exemplar das outras edições? Os livros continuam na estante, só deixam de aparecer juntos.')) {
-                  await updateBook(book.id, { workId: undefined, editionLanguage: undefined });
-                }
-              }}>Desligar das outras edições</button>
-            </div>
-          )}
           <div className="card">
             <h3>💗 Como o livro me fez sentir</h3>
             <FeelingPicker value={book.feelings ?? []} onChange={(feelings) => updateBook(book.id, { feelings })} />
@@ -194,6 +173,11 @@ export default function BookDetail() {
       {tab === 'glossario' && <BookGlossaryTab book={book} />}
 
       <SeriesStrip book={book} books={allBooks} />
+      <EditionsStrip book={book} books={allBooks} onUnlink={async () => {
+        if (confirm('Desligar este exemplar das outras edições? Os livros continuam na estante, só deixam de aparecer juntos.')) {
+          await updateBook(book.id, { workId: undefined, editionLanguage: undefined });
+        }
+      }} />
 
       {coverPhoto && (
         <Modal title="Nova capa" onClose={() => setCoverPhoto(null)}>

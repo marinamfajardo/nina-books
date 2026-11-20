@@ -1,3 +1,4 @@
+import { editionLabel, otherEditions } from '../domain/editions';
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Book, Format, Status } from '../db';
@@ -196,7 +197,17 @@ export function BookBrowser({ base = {}, hide = [], queueLink = false }: { base?
 
 /** Faixa com os livros da mesma saga (capas pequenas, com estrelas). */
 export function SeriesStrip({ book, books }: { book: Book; books: Book[] }) {
-  const list = seriesBooks(books, book.series);
+  // o mesmo livro em vários idiomas aparece uma vez só (o que está aberto, se for dele)
+  const seen = new Set<string>();
+  const list = seriesBooks(books, book.series)
+    .sort((a, b) => (a.id === book.id ? -1 : b.id === book.id ? 1 : 0))
+    .filter((b) => {
+      const k = b.workId ?? b.id;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .sort((a, b) => (a.seriesNumber ?? 999) - (b.seriesNumber ?? 999) || a.title.localeCompare(b.title, 'pt-BR'));
   if (!book.series || list.length < 2) return null;
   return (
     <div className="card mt series-strip">
@@ -209,6 +220,31 @@ export function SeriesStrip({ book, books }: { book: Book; books: Book[] }) {
           <Link key={b.id} to={`/livro/${b.id}`} className={`strip-item${b.id === book.id ? ' current' : ''}`} aria-current={b.id === book.id}>
             <Cover book={b} />
             <div className="small" style={{ fontWeight: 700, marginTop: 4 }}>{b.seriesNumber ? `Vol. ${b.seriesNumber}` : ''}</div>
+            <div className="small ellipsis">{b.title}</div>
+            {isRated(b.rating) ? <Stars value={b.rating} /> : <span className="small muted">{STATUS_LABEL[b.status]}</span>}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Faixa com o mesmo livro em outras edições/idiomas (igual à da saga). */
+export function EditionsStrip({ book, books, onUnlink }: { book: Book; books: Book[]; onUnlink: () => void }) {
+  const others = otherEditions(book, books);
+  if (!others.length) return null;
+  const list = [book, ...others];
+  return (
+    <div className="card mt series-strip">
+      <div className="row between">
+        <h3 style={{ margin: 0 }}>🌐 Outros idiomas</h3>
+        <button className="ghost small" onClick={onUnlink}>desligar</button>
+      </div>
+      <div className="strip">
+        {list.map((b) => (
+          <Link key={b.id} to={`/livro/${b.id}`} className={`strip-item${b.id === book.id ? ' current' : ''}`} aria-current={b.id === book.id}>
+            <Cover book={b} />
+            <div className="small" style={{ fontWeight: 700, marginTop: 4 }}>{editionLabel(b) ?? 'Sem idioma'}</div>
             <div className="small ellipsis">{b.title}</div>
             {isRated(b.rating) ? <Stars value={b.rating} /> : <span className="small muted">{STATUS_LABEL[b.status]}</span>}
           </Link>
